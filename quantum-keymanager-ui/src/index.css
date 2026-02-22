@@ -1,0 +1,43 @@
+:root {
+  --bg-deep: #050505;
+  --bg-panel: #141414;
+  --bg-panel-hover: #1a1a1a;
+  --accent-cyan: #00F0FF;
+  --text-main: #e0e0e0;
+  --text-muted: #888888;
+  --border-color: #333333;
+  --success: #00ff9d;
+  --danger: #ff5555;
+  --danger-dim: #552222;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background-color: var(--bg-deep);
+  color: var(--text-main);
+  font-family: 'Roboto', sans-serif;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+}
+
+/* Scrollbar Customizada */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-deep); 
+}
+::-webkit-scrollbar-thumb {
+  background: #333; 
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-cyan); 
+}
+
+a {
+  text-decoration: none;
+}

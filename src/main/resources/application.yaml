@@ -1,0 +1,9 @@
+spring:
+  application:
+    name: quantum-random-service
+server:
+  port: ${PORT:10000}
+
+logging:
+  level:
+    com.leporonitech.quantum_random_service: DEBUG

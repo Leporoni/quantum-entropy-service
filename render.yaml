@@ -1,0 +1,44 @@
+services:
+  # 1. Quantum Random Generator API (Java)
+  - type: web
+    name: quantum-generator-api
+    env: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: SERVER_PORT
+        value: 10000
+      - key: PORT
+        value: 10000
+
+  # 2. Quantum Key Manager API (Java)
+  - type: web
+    name: quantum-keymanager-api
+    env: docker
+    rootDir: quantum-keymanager
+    dockerfilePath: Dockerfile
+    plan: free
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: SERVER_PORT
+        value: 10000
+      - key: PORT
+        value: 10000
+      - key: SPRING_PROFILES_ACTIVE
+        value: memory
+      - key: API_BASE_URL
+        value: https://quantum-generator-api.onrender.com
+      - key: MASTER_KEY_SECRET
+        generateValue: true
+
+  # 3. Quantum Frontend (React + Nginx)
+  - type: web
+    name: quantum-frontend
+    env: docker
+    rootDir: quantum-keymanager-ui
+    dockerfilePath: Dockerfile
+    plan: free
+    envVars:
+      - key: VITE_API_URL
+        value: https://quantum-keymanager-api.onrender.com/api/v1

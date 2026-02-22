@@ -1,0 +1,39 @@
+services:
+  quantum-service:
+    build: .
+    container_name: quantum-service
+    ports:
+      - "8081:10000"
+    networks:
+      - quantum-net
+    restart: unless-stopped
+    environment:
+      - SERVER_PORT=10000
+
+  quantum-keymanager:
+    build: ./quantum-keymanager
+    container_name: quantum-keymanager
+    ports:
+      - "8082:10000"
+    environment:
+      - SPRING_PROFILES_ACTIVE=memory
+      - MASTER_KEY_SECRET=super_secret_master_key_change_me_in_prod
+      - API_BASE_URL=http://quantum-service:10000
+    networks:
+      - quantum-net
+    restart: unless-stopped
+
+  quantum-keymanager-ui:
+    build: ./quantum-keymanager-ui
+    container_name: quantum-keymanager-ui
+    ports:
+      - "3000:80"
+    depends_on:
+      - quantum-keymanager
+    networks:
+      - quantum-net
+    restart: unless-stopped
+
+networks:
+  quantum-net:
+    driver: bridge

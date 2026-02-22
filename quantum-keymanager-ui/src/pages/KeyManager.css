@@ -1,0 +1,328 @@
+.keymanager-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 30px;
+    background-color: #0a0a0a;
+    border-bottom: 1px solid var(--border-color);
+    height: 70px;
+}
+
+.brand-small {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.2rem;
+}
+
+.brand-small span {
+    color: var(--accent-cyan);
+}
+
+.back-link {
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.back-link:hover {
+    color: #fff;
+}
+
+.keymanager-container {
+    display: grid;
+    grid-template-rows: 70px 1fr auto;
+    height: 100vh;
+}
+
+.workspace {
+    display: grid;
+    grid-template-columns: 350px 1fr;
+    overflow: hidden;
+}
+
+.config-sidebar {
+    background-color: #0f0f0f;
+    border-right: 1px solid var(--border-color);
+    padding: 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.config-sidebar h3 {
+    font-family: 'Orbitron', sans-serif;
+    color: #fff;
+    margin-bottom: 10px;
+    font-size: 1.1rem;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+}
+
+select,
+input {
+    width: 100%;
+    background: #000;
+    border: 1px solid var(--border-color);
+    color: #fff;
+    padding: 12px;
+    border-radius: 6px;
+    font-family: 'Fira Code', monospace;
+}
+
+.form-group select:focus {
+    border-color: var(--accent-cyan);
+    outline: none;
+}
+
+.alias-input {
+    width: 100%;
+    padding: 10px;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 4px;
+    color: #fff;
+    font-family: 'Fira Code', monospace;
+    font-size: 0.85rem;
+    transition: all 0.3s ease;
+}
+
+.alias-input:focus {
+    border-color: var(--accent-cyan);
+    outline: none;
+    box-shadow: 0 0 10px rgba(0, 242, 255, 0.2);
+}
+
+.btn-generate {
+    background: var(--accent-cyan);
+    color: #000;
+    border: none;
+    padding: 15px;
+    font-weight: bold;
+    font-size: 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: 0.2s;
+    margin-top: auto;
+}
+
+.btn-generate:hover {
+    box-shadow: 0 0 15px var(--accent-cyan);
+    opacity: 0.9;
+}
+
+.btn-generate:disabled {
+    background: #333;
+    color: #666;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+.btn-vault-access {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 12px;
+    margin-top: 15px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid #333;
+    color: #888;
+    text-decoration: none;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    transition: 0.3s;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.btn-vault-access:hover {
+    background: var(--accent-cyan);
+    color: #000;
+    border-color: var(--accent-cyan);
+    box-shadow: 0 0 20px var(--accent-cyan);
+}
+
+.results-area {
+    padding: 40px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+}
+
+.terminal-log {
+    background: #000;
+    border: 1px solid #222;
+    padding: 15px;
+    border-radius: 8px;
+    font-family: 'Fira Code', monospace;
+    font-size: 0.85rem;
+    color: var(--success);
+    height: 150px;
+    overflow-y: auto;
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.8);
+}
+
+.log-entry {
+    margin-bottom: 5px;
+    opacity: 0.8;
+}
+
+.log-entry span {
+    color: var(--accent-cyan);
+}
+
+.keys-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    opacity: 0.3;
+    pointer-events: none;
+    transition: opacity 0.5s ease;
+}
+
+.keys-container.active {
+    opacity: 1;
+    pointer-events: all;
+}
+
+.key-box {
+    background: var(--bg-panel);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+}
+
+.key-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    border-bottom: 1px solid #333;
+    padding-bottom: 10px;
+}
+
+.key-content {
+    background: #080808;
+    border: none;
+    color: #aaa;
+    font-family: 'Fira Code', monospace;
+    font-size: 0.8rem;
+    padding: 10px;
+    resize: none;
+    height: 200px;
+    width: 100%;
+    margin-bottom: 15px;
+    border-radius: 4px;
+}
+
+.private-key-area {
+    filter: blur(4px);
+    transition: 0.3s;
+}
+
+.private-key-area:hover,
+.private-key-area:focus,
+.private-key-area.visible {
+    filter: blur(0);
+}
+
+.btn-icon {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: inherit;
+    display: flex;
+    align-items: center;
+    padding: 0;
+    opacity: 0.7;
+    transition: 0.2s;
+}
+
+.btn-icon:hover {
+    opacity: 1;
+    transform: scale(1.1);
+}
+
+.btn-download {
+    background: transparent;
+    border: 1px solid #444;
+    color: #fff;
+    padding: 8px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.btn-download:hover {
+    background: #222;
+    border-color: #fff;
+}
+
+@media (max-width: 768px) {
+    .keymanager-container {
+        height: auto;
+        grid-template-rows: auto;
+        display: block;
+    }
+
+    .keymanager-header {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        padding: 0 15px;
+        height: 60px;
+    }
+
+    .workspace {
+        grid-template-columns: 1fr;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .config-sidebar {
+        border-right: none;
+        border-bottom: 1px solid var(--border-color);
+        padding: 20px;
+    }
+
+    .results-area {
+        padding: 20px;
+        gap: 20px;
+        height: auto;
+        overflow: visible;
+    }
+
+    .keys-container {
+        grid-template-columns: 1fr;
+    }
+
+    .btn-generate {
+        margin-top: 20px;
+    }
+
+    .btn-vault-access {
+        background: var(--accent-cyan);
+        color: #000;
+        border: none;
+        font-weight: bold;
+    }
+}
