@@ -11,12 +11,21 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.security.*;
 import java.util.Base64;
-import java.util.Base64;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.client.RestTemplate;
 
+/**
+ * Serviço central para a lógica de negócio do gerenciamento de chaves RSA.
+ *
+ * Responsável por:
+ * - Criar chaves RSA usando entropia quântica como semente (seed).
+ * - Criptografar e descriptografar chaves privadas para armazenamento seguro.
+ * - Gerenciar o ciclo de vida das chaves (listar, buscar, deletar).
+ * - Implementar o protocolo de exportação segura (Key Wrapping).
+ * - Monitorar e reportar o status da entropia quântica disponível.
+ */
 @Service
 @RequiredArgsConstructor
 public class KeyManagerService {
@@ -30,12 +39,28 @@ public class KeyManagerService {
 
     private final RestTemplate restTemplate = new RestTemplate();
 
+    /**
+     * Cria e armazena um novo par de chaves RSA.
+     *
+     * <p>Fluxo de execução:
+     * 1. Consome 5 unidades de entropia quântica do banco de dados (Consume & Discard).
+     * 2. Usa a entropia para inicializar um gerador de números pseudo-aleatórios (SHA1PRNG).
+     * 3. Gera o par de chaves RSA com o tamanho especificado.
+     * 4. Criptografa a chave privada com a Master Key do sistema (via EncryptionService).
+     * 5. Salva a chave (com a privada criptografada) no repositório.
+     *
+     * @param alias um nome amigável para a chave.
+     * @param keySize o tamanho da chave em bits (ex: 2048, 4096).
+     * @return a entidade RsaKey salva, contendo a chave pública e a privada criptografada.
+     * @throws InsufficientEntropyException se não houver entropia suficiente (menos de 5 unidades).
+     * @throws Exception para outros erros de criptografia ou de banco de dados.
+     */
     @Transactional
     public RsaKey createRsaKey(String alias, int keySize) throws Exception {
         // 1. Obter entropia do banco (precisamos de bytes suficientes para o seed)
         // Buscamos os últimos 5 registros de entropia para garantir boa aleatoriedade
         List<QuantumData> entropyBatch = quantumDataRepository.findUnusedDataWithLock(5);
-        if (entropyBatch.isEmpty()) {
+        if (entropyBatch.isEmpty() || entropyBatch.size() < 5) {
             long available = quantumDataRepository.countByUsedFalse();
             throw new InsufficientEntropyException(
                     String.format(
@@ -79,15 +104,35 @@ public class KeyManagerService {
         return rsaKeyRepository.save(rsaKey);
     }
 
+    /**
+     * Retorna uma lista de todas as chaves RSA armazenadas.
+     * A chave privada não é incluída nos objetos retornados.
+     *
+     * @return uma lista de entidades RsaKey.
+     */
     public List<RsaKey> getAllKeys() {
         return rsaKeyRepository.findAll();
     }
 
+    /**
+     * Busca uma chave RSA específica pelo seu ID.
+     *
+     * @param id o ID da chave a ser buscada.
+     * @return a entidade RsaKey correspondente.
+     * @throws RuntimeException se a chave não for encontrada.
+     */
     public RsaKey getKeyById(Long id) {
         return rsaKeyRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Key not found"));
     }
 
+    /**
+     * Deleta uma chave RSA específica do banco de dados.
+     * Esta operação é irreversível.
+     *
+     * @param id o ID da chave a ser deletada.
+     * @throws RuntimeException se a chave não for encontrada.
+     */
     @Transactional
     public void deleteKey(Long id) {
         if (!rsaKeyRepository.existsById(id)) {
@@ -96,11 +141,29 @@ public class KeyManagerService {
         rsaKeyRepository.deleteById(id);
     }
 
+    /**
+     * Deleta todas as chaves RSA do banco de dados.
+     * Esta operação é irreversível e limpa todo o cofre de chaves.
+     */
     @Transactional
     public void deleteAllKeys() {
         rsaKeyRepository.deleteAll();
     }
 
+    /**
+     * Exporta uma chave privada de forma segura usando o protocolo de Key Wrapping.
+     *
+     * <p>Fluxo de execução:
+     * 1. Busca a chave no banco e descriptografa a chave privada (protegida pela Master Key).
+     * 2. Consome 2 unidades de nova entropia quântica para gerar uma chave de transporte temporária (AES-256).
+     * 3. Criptografa a chave privada com esta chave de transporte.
+     * 4. Retorna a chave privada criptografada junto com a chave de transporte.
+     *
+     * @param id o ID da chave a ser exportada.
+     * @return um objeto KeyExportResponse contendo a chave privada criptografada e a chave de transporte.
+     * @throws InsufficientEntropyException se não houver entropia suficiente para a chave de transporte.
+     * @throws Exception para outros erros de criptografia.
+     */
     @Transactional
     public KeyExportResponse exportPrivateKey(Long id) throws Exception {
         RsaKey rsaKey = getKeyById(id);
@@ -111,7 +174,7 @@ public class KeyManagerService {
         // 2. Obter nova entropia para a chave de transporte (AES-256 precisa de 32
         // bytes)
         List<QuantumData> transportEntropy = quantumDataRepository.findUnusedDataWithLock(2);
-        if (transportEntropy.isEmpty()) {
+        if (transportEntropy.isEmpty() || transportEntropy.size() < 2) {
             long available = quantumDataRepository.countByUsedFalse();
             throw new InsufficientEntropyException(
                     String.format(
@@ -145,6 +208,12 @@ public class KeyManagerService {
                 "AES-256");
     }
 
+    /**
+     * Obtém o status atual do "combustível" de entropia quântica.
+     * Também aciona um "ping" para o worker de coleta se o nível estiver baixo.
+     *
+     * @return um objeto EntropyStatus com a contagem de registros disponíveis e os custos por operação.
+     */
     public EntropyStatus getEntropyStatus() {
         long availableRecords = quantumDataRepository.countByUsedFalse();
 
@@ -156,6 +225,11 @@ public class KeyManagerService {
         return new EntropyStatus(availableRecords, 5, 2);
     }
 
+    /**
+     * Envia uma requisição HTTP para "acordar" o worker de coleta de entropia.
+     * Útil em plataformas com "cold starts" (como Render.com no plano gratuito).
+     * Executa de forma assíncrona para não bloquear a thread principal.
+     */
     private void wakeWorker() {
         CompletableFuture.runAsync(() -> {
             try {
@@ -166,6 +240,9 @@ public class KeyManagerService {
         });
     }
 
+    /**
+     * DTO para o status da entropia.
+     */
     @lombok.Value
     public static class EntropyStatus {
         long availableRecords;
@@ -173,6 +250,9 @@ public class KeyManagerService {
         int costPerExport;
     }
 
+    /**
+     * DTO para a resposta da exportação de chave.
+     */
     @lombok.Value
     public static class KeyExportResponse {
         String encryptedPrivateKey;

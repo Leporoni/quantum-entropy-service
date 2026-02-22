@@ -1,9 +1,18 @@
+# =============================================================================
+# Configuração da aplicação Quantum Random Service (API de números quânticos)
+# =============================================================================
+
 spring:
   application:
-    name: quantum-random-service
+    name: quantum-random-service  # Nome da aplicação no ecossistema Spring
+
+# Porta do servidor embutido (Tomcat).
+# Usa a variável de ambiente PORT se disponível (ex: Render.com), senão usa 10000.
 server:
   port: ${PORT:10000}
 
+# Configuração de logging.
+# Nível DEBUG para o pacote da aplicação — útil para ver detalhes das chamadas à API LfD.
 logging:
   level:
     com.leporonitech.quantum_random_service: DEBUG

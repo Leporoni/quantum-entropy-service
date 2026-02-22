@@ -7,30 +7,58 @@ import { decryptPrivateKey, formatPublicKey } from '../utils/crypto';
 import EntropyMeter from '../components/EntropyMeter';
 import './KeyManager.css';
 
+/**
+ * Componente principal da página de Gerenciamento de Chaves (Key Manager).
+ *
+ * Esta página funciona como a área de trabalho para gerar, visualizar e exportar
+ * pares de chaves RSA. Ela orquestra a interação do usuário com os serviços de backend,
+ * implementa o protocolo de decriptografia segura no lado do cliente (Client-Side Decryption)
+ * e exibe logs detalhados de todo o processo.
+ */
 const KeyManager: React.FC = () => {
+  // --- STATE MANAGEMENT ---
+
+  // Configurações da chave a ser gerada
   const [keySize, setKeySize] = useState('2048');
   const [format, setFormat] = useState('pem');
+  const [keyAlias, setKeyAlias] = useState(`key_${Date.now()}`);
+
+  // Estado da UI
   const [isGenerating, setIsGenerating] = useState(false);
   const [logs, setLogs] = useState<string[]>(['> System ready. Connected to Quantum Backend.']);
   const [keysVisible, setKeysVisible] = useState(false);
   const [showPrivateKey, setShowPrivateKey] = useState(false);
+
+  // Armazenamento das chaves geradas
   const [publicKey, setPublicKey] = useState('Waiting for generation...');
   const [privateKey, setPrivateKey] = useState('Waiting for generation...');
-  const [keyAlias, setKeyAlias] = useState(`key_${Date.now()}`); // Auto Alias
 
+  // Referência para o elemento do terminal para auto-scroll
   const terminalRef = useRef<HTMLDivElement>(null);
 
+  /**
+   * Efeito que rola o terminal de logs para o final sempre que uma nova mensagem é adicionada.
+   */
   useEffect(() => {
     if (terminalRef.current) {
       terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
     }
   }, [logs]);
 
+  /**
+   * Adiciona uma nova mensagem ao estado de logs do terminal.
+   * @param message A mensagem a ser adicionada.
+   */
   const addLog = (message: string) => {
     setLogs(prev => [...prev, `> ${message}`]);
   };
 
+  /**
+   * Orquestra todo o processo de geração e obtenção de um par de chaves RSA.
+   * Este é o fluxo principal da aplicação.
+   */
   const generateKeys = async () => {
+    // 1. Reset e preparação do estado da UI
     setIsGenerating(true);
     setKeysVisible(false);
     setLogs(['> Initializing secure request...']);
@@ -38,44 +66,40 @@ const KeyManager: React.FC = () => {
     setPrivateKey('Waiting for generation...');
 
     try {
-      // 1. Create Key on Server (Quantum Generation)
-      addLog("Requesting RSA generation on server...");
+      // 2. Geração da Chave no Servidor (usando Semente Quântica)
+      addLog(`Requesting RSA generation on server...`);
       addLog(`Parameters: ${keySize} bits, Alias: ${keyAlias}`);
-
       const createdKey = await keyService.createKey({
         alias: keyAlias,
         keySize: parseInt(keySize)
       });
-
-      addLog("✔ Key generated successfully! ID: " + createdKey.id);
+      addLog(`✔ Key generated successfully! ID: ${createdKey.id}`);
       addLog("Receiving Public Key...");
 
       const formattedPublic = formatPublicKey(createdKey.publicKey);
       setPublicKey(formattedPublic);
 
-      // 2. Export Private Key (Secure Transport Protocol)
+      // 3. Exportação Segura da Chave Privada (Protocolo de Key Wrapping)
       addLog("Initiating Secure Export Protocol...");
       addLog("Requesting encrypted private key...");
-
       const exportData = await keyService.exportKey(createdKey.id);
-
       addLog("✔ Encrypted payload received.");
       addLog(`Transport Key (AES-256): Received via secure channel.`);
-      addLog("Decrypting payload in browser (Client-Side)...");
 
-      // 3. Decrypt Client-Side
+      // 4. Decriptografia no Cliente (Client-Side Decryption)
+      addLog("Decrypting payload in browser (Client-Side)...");
       const decryptedPrivate = decryptPrivateKey(exportData.encryptedPrivateKey, exportData.transportKey);
       setPrivateKey(decryptedPrivate);
-
       addLog("✔ Decryption completed successfully.");
+
+      // 5. Exibição das chaves
       setKeysVisible(true);
 
     } catch (error: any) {
       console.error(error);
-
-      // Check if it's an entropy depletion error (422 Unprocessable Entity)
+      // Tratamento de erro específico para falta de entropia
       if (error.response?.status === 422) {
-        const serverMessage = error.response?.data?.message || error.response?.data || "Insufficient quantum entropy.";
+        const serverMessage = error.response?.data?.message || "Insufficient quantum entropy.";
         addLog("⚠️ QUANTUM FUEL DEPLETED");
         addLog(serverMessage);
         addLog("Solution: Wait for the entropy collector to refuel (check Quantum Fuel meter).");
@@ -85,25 +109,30 @@ const KeyManager: React.FC = () => {
       }
     } finally {
       setIsGenerating(false);
-      // Update alias for next
+      // Atualiza o alias para a próxima geração, evitando nomes duplicados.
       setKeyAlias(`key_${Date.now()}`);
     }
   };
 
+  /**
+   * Inicia o download de um arquivo de texto contendo a chave pública ou privada.
+   * @param type O tipo de chave ('public' ou 'private').
+   * @param content O conteúdo da chave a ser salvo no arquivo.
+   */
   const downloadKey = (type: 'public' | 'private', content: string) => {
     const now = new Date();
-    const dateStr = now.toISOString().split('T')[0]; // YYYY-MM-DD
-    const timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '-'); // HH-MM-SS
+    const dateStr = now.toISOString().split('T')[0];
+    const timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '-');
     const timestamp = `${dateStr}_${timeStr}`;
 
     const element = document.createElement("a");
     const file = new Blob([content], { type: 'text/plain' });
     element.href = URL.createObjectURL(file);
     element.download = `${keyAlias}_${type}_${timestamp}.${format}`;
-    document.body.appendChild(element);
+    document.body.appendChild(element); // Necessário para Firefox
     element.click();
     document.body.removeChild(element);
-    addLog(`${type} key download initiated.`);
+    addLog(`Download da chave ${type} iniciado.`);
   };
 
   return (

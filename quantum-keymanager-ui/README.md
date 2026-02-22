@@ -1,73 +1,49 @@
-# React + TypeScript + Vite
+# Quantum Key Manager UI
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Este é o projeto de frontend para o **Quantum Key Manager**. Desenvolvido com React, Vite e TypeScript, ele oferece uma interface de usuário moderna com um tema "Cyberpunk Corporate" para interagir com a API de gerenciamento de chaves.
 
-Currently, two official plugins are available:
+## Funcionalidades
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Dashboard Principal**: Exibe o medidor de entropia ("Quantum Fuel") e um log de operações em tempo real.
+- **Geração de Chaves**: Permite criar novas chaves RSA, especificando um alias e o tamanho da chave.
+- **Cofre de Chaves (Key Vault)**: Lista todas as chaves armazenadas, permitindo busca e exclusão.
+- **Exportação Segura**: Implementa o fluxo de *Client-Side Key Unwrapping*. A chave privada é recebida criptografada com uma chave de transporte temporária e decifrada localmente no navegador, garantindo que a chave privada em texto plano nunca trafegue pela rede.
 
-## React Compiler
+## Stacks e Bibliotecas
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Framework**: React 19 com Vite e TypeScript
+- **Roteamento**: React Router
+- **Chamadas de API**: Axios
+- **Criptografia (Client-Side)**: `node-forge` para decriptografia AES.
+- **Estilização**: CSS Modules e CSS puro.
+- **Ícones**: Lucide React
 
-## Expanding the ESLint configuration
+---
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Executando em Modo de Desenvolvimento
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+Para rodar a interface localmente para desenvolvimento:
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+1.  **Navegue até o diretório do projeto**:
+    ```bash
+    cd quantum-keymanager-ui
+    ```
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+2.  **Instale as dependências**:
+    ```bash
+    npm install
+    ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+3.  **Inicie o servidor de desenvolvimento**:
+    ```bash
+    npm run dev
+    ```
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+    A aplicação estará disponível em `http://localhost:5173` (ou em outra porta, se a 5173 estiver em uso). O servidor de desenvolvimento oferece Hot Module Replacement (HMR) para uma experiência de desenvolvimento mais fluida.
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## Scripts Disponíveis
+
+- `npm run dev`: Inicia o servidor de desenvolvimento.
+- `npm run build`: Compila e otimiza a aplicação para produção.
+- `npm run lint`: Executa o linter (ESLint) para análise estática do código.
+- `npm run preview`: Inicia um servidor local para visualizar a versão de produção (build).

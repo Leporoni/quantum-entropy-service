@@ -6,12 +6,33 @@ import { keyService, type RsaKeyResponse } from '../services/api';
 import { decryptPrivateKey } from '../utils/crypto';
 import './KeyVault.css';
 
+/**
+ * Componente da página "Cofre de Chaves" (Key Vault).
+ *
+ * Esta página é responsável por exibir, gerenciar e permitir a exportação
+ * de todas as chaves RSA armazenadas no sistema.
+ * Funcionalidades:
+ * - Listagem de todas as chaves com seus metadados.
+ * - Filtro/busca por alias ou ID.
+ * - Exclusão de chaves individuais.
+ * - Limpeza completa do cofre (exclusão de todas as chaves).
+ * - Exportação segura da chave privada, com decriptografia no lado do cliente.
+ */
 const KeyVault: React.FC = () => {
+  // --- STATE MANAGEMENT ---
+
+  // Lista de chaves RSA buscadas da API.
   const [keys, setKeys] = useState<RsaKeyResponse[]>([]);
+  // Controla a exibição de um estado de "carregando" enquanto as chaves são buscadas.
   const [isLoading, setIsLoading] = useState(true);
+  // Termo de busca inserido pelo usuário para filtrar as chaves.
   const [searchTerm, setSearchTerm] = useState('');
+  // Armazena o ID da chave que está sendo exportada para desabilitar o botão e mostrar feedback.
   const [exportingKeyId, setExportingKeyId] = useState<number | null>(null);
 
+  /**
+   * Busca a lista de chaves da API e atualiza o estado do componente.
+   */
   const fetchKeys = async () => {
     try {
       setIsLoading(true);
@@ -19,95 +40,111 @@ const KeyVault: React.FC = () => {
       setKeys(data);
     } catch (error) {
       console.error("Erro ao carregar cofre:", error);
+      alert("Falha ao carregar as chaves do cofre.");
     } finally {
       setIsLoading(false);
     }
   };
 
+  /**
+   * Efeito que busca as chaves da API assim que o componente é montado.
+   */
   useEffect(() => {
     fetchKeys();
   }, []);
 
+  /**
+   * Manipula a exclusão de uma chave específica.
+   * Pede confirmação ao usuário antes de prosseguir.
+   * @param id O ID da chave a ser deletada.
+   * @param alias O alias da chave, para exibição na confirmação.
+   */
   const handleDelete = async (id: number, alias: string) => {
-    if (window.confirm(`CONFIRM: The deletion of key "${alias}" is irreversible and will prevent access to any data encrypted by it.`)) {
+    if (window.confirm(`CONFIRMAR: A exclusão da chave "${alias}" é irreversível. Deseja continuar?`)) {
       try {
         await keyService.deleteKey(id);
+        // Remove a chave da lista local para atualizar a UI instantaneamente.
         setKeys(keys.filter(k => k.id !== id));
       } catch (error) {
-        alert("Error deleting key.");
+        alert("Erro ao deletar a chave.");
       }
     }
   };
 
+  /**
+   * Manipula a exclusão de TODAS as chaves do cofre.
+   * Exibe um aviso crítico e pede dupla confirmação.
+   */
   const handleClearVault = async () => {
-    if (window.confirm("CRITICAL WARNING: Are you sure you want to PURGE the entire vault? This action is IRREVERSIBLE and will destroy ALL keys.")) {
+    if (window.confirm("ALERTA CRÍTICO: Tem certeza que deseja limpar TODO o cofre? Esta ação é IRREVERSÍVEL e destruirá TODAS as chaves.")) {
       try {
         await keyService.deleteAllKeys();
         setKeys([]);
-        alert("Vault purged successfully.");
+        alert("Cofre limpo com sucesso.");
       } catch (error) {
-        alert("Failed to purge vault.");
+        alert("Falha ao limpar o cofre.");
       }
     }
   };
 
+  /**
+   * Orquestra a exportação segura da chave privada.
+   * @param id O ID da chave a ser exportada.
+   * @param alias O alias da chave, para nomear o arquivo.
+   */
   const handleExportPrivateKey = async (id: number, alias: string) => {
-    // Confirm entropy consumption
-    if (!window.confirm(`Export private key for "${alias}"?\n\n⚠️ This operation will consume 2 units of quantum entropy to generate a secure transport key.`)) {
+    if (!window.confirm(`Exportar a chave privada para "${alias}"?\n\n⚠️ Esta operação consumirá 2 unidades de entropia quântica.`)) {
       return;
     }
 
     setExportingKeyId(id);
     try {
-      // 1. Request encrypted private key from backend
+      // 1. Requisita a chave privada criptografada do backend (protocolo de Key Wrapping)
       const exportData = await keyService.exportKey(id);
 
-      // 2. Decrypt client-side (same as KeyManager)
+      // 2. Decriptografa a chave no lado do cliente
       const decryptedPrivate = decryptPrivateKey(exportData.encryptedPrivateKey, exportData.transportKey);
 
-      // 3. Download as file with readable timestamp
-      const now = new Date();
-      const dateStr = now.toISOString().split('T')[0]; // YYYY-MM-DD
-      const timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '-'); // HH-MM-SS
-      const timestamp = `${dateStr}_${timeStr}`;
+      // 3. Inicia o download do arquivo
+      downloadFile(decryptedPrivate, `${alias}_private_key.pem`);
 
-      const element = document.createElement("a");
-      const file = new Blob([decryptedPrivate], { type: "text/plain" });
-      element.href = URL.createObjectURL(file);
-      element.download = `${alias}_private_${timestamp}.pem`;
-      document.body.appendChild(element);
-      element.click();
-      document.body.removeChild(element);
-
-      alert(`Private key for "${alias}" exported successfully.`);
+      alert(`Chave privada para "${alias}" exportada com sucesso.`);
     } catch (error: any) {
       console.error(error);
       if (error.response?.status === 422) {
-        alert("⚠️ QUANTUM FUEL DEPLETED\n\nInsufficient entropy to export key. Please wait for the collector to refuel.");
+        alert("⚠️ COMBUSTÍVEL QUÂNTICO INSUFICIENTE\n\nNão há entropia para exportar a chave. Aguarde o reabastecimento.");
       } else {
-        alert("Failed to export private key. Check console for details.");
+        alert("Falha ao exportar a chave privada. Verifique o console.");
       }
     } finally {
       setExportingKeyId(null);
     }
   };
 
+  /**
+   * Inicia o download da chave pública (operação simples, sem custo de entropia).
+   * @param key O objeto da chave contendo a chave pública.
+   */
   const handleExportPublicKey = (key: RsaKeyResponse) => {
-    // No entropy consumption, direct download
-    const now = new Date();
-    const dateStr = now.toISOString().split('T')[0]; // YYYY-MM-DD
-    const timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '-'); // HH-MM-SS
-    const timestamp = `${dateStr}_${timeStr}`;
+    downloadFile(key.publicKey, `${key.alias}_public_key.pem`);
+  };
 
+  /**
+   * Função utilitária para criar e acionar o download de um arquivo de texto.
+   * @param content O conteúdo do arquivo.
+   * @param fileName O nome do arquivo.
+   */
+  const downloadFile = (content: string, fileName: string) => {
     const element = document.createElement("a");
-    const file = new Blob([key.publicKey], { type: "text/plain" });
+    const file = new Blob([content], { type: "text/plain" });
     element.href = URL.createObjectURL(file);
-    element.download = `${key.alias}_public_${timestamp}.pem`;
+    element.download = fileName;
     document.body.appendChild(element);
     element.click();
     document.body.removeChild(element);
-  };
+  }
 
+  // Deriva a lista de chaves filtradas a partir do estado `keys` e `searchTerm`.
   const filteredKeys = keys.filter(k =>
     k.alias.toLowerCase().includes(searchTerm.toLowerCase()) ||
     k.id.toString().includes(searchTerm)

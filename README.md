@@ -1,39 +1,39 @@
 # Quantum Entropy Service
 
-A microservices project that fetches quantum random numbers from an external API, exposes them via a Spring Boot service, and utilizes them to generate secure RSA keys via a dedicated Key Manager — all managed through a modern web interface.
+Um projeto de microsserviços que busca números quânticos aleatórios de uma API externa, os expõe através de um serviço Spring Boot e os utiliza para gerar chaves RSA seguras por meio de um Key Manager dedicado — tudo gerenciado por uma interface web moderna.
 
-## Architecture Overview
+## Arquitetura Geral
 
-The system consists of three main components running in Docker containers:
+O sistema consiste em três componentes principais, executados em contêineres Docker:
 
-1. **Quantum API (Java/Spring Boot)**: Fetches random numbers (via HEX format) and exposes them as Base64 strings.
-2. **Quantum Key Manager (Java/Spring Boot)**: Consumes quantum entropy to generate and manage RSA keys securely. Uses an in-memory H2 database.
-3. **Quantum Key Manager UI (React/Vite)**: Modern "Cyberpunk Corporate" interface for secure key generation, visualization, and export.
+1.  **Quantum API (Java/Spring Boot)**: Busca números aleatórios (em formato HEX) e os expõe como strings Base64.
+2.  **Quantum Key Manager (Java/Spring Boot)**: Consome a entropia quântica para gerar e gerenciar chaves RSA de forma segura. Utiliza um banco de dados em memória (H2).
+3.  **Quantum Key Manager UI (React/Vite)**: Uma interface moderna com estilo "Cyberpunk Corporate" para geração, visualização e exportação segura de chaves.
 
-## Prerequisites
+## Pré-requisitos
 
-- **Docker** and **Docker Compose** installed on your machine.
-- (Optional) Java 21 and Maven if you want to run the API locally without Docker.
+- **Docker** e **Docker Compose** instalados em sua máquina.
+- (Opcional) Java 21 e Maven, caso queira executar a API localmente sem Docker.
 
 ---
 
-## 🚀 Running with Docker (Recommended)
+## 🚀 Executando com Docker (Recomendado)
 
-This is the easiest way to run the entire system.
+Esta é a maneira mais fácil de executar o sistema completo.
 
-1. **Build and Start the services**:
+1.  **Construa e Inicie os serviços**:
     ```bash
     docker compose up --build -d
     ```
-    This command will build the Java APIs and the React UI images, and start everything in the background.
+    Este comando irá construir as imagens das APIs Java e da UI em React, e iniciará todos os serviços em segundo plano.
 
-2. **Check Status**:
-    To see if everything is running:
+2.  **Verifique o Status**:
+    Para ver se tudo está em execução:
     ```bash
     docker compose ps
     ```
 
-3. **View Logs**:
+3.  **Visualize os Logs**:
     - **Quantum API**:
       ```bash
       docker compose logs -f quantum-service
@@ -47,7 +47,7 @@ This is the easiest way to run the entire system.
       docker compose logs -f quantum-keymanager-ui
       ```
 
-4. **Stop the services**:
+4.  **Pare os serviços**:
     ```bash
     docker compose down
     ```
@@ -56,76 +56,76 @@ This is the easiest way to run the entire system.
 
 ## 🎨 Quantum Key Manager UI
 
-The web interface runs on port **3000** and provides a high-end dashboard to manage your quantum keys.
+A interface web é executada na porta **3000** e oferece um dashboard de alta qualidade para gerenciar suas chaves quânticas.
 
 - **URL**: [http://localhost:3000](http://localhost:3000)
-- **Features**:
-    - **Entropy Meter**: Real-time visualization of available entropy in the system.
-    - **Real-time Logs**: Terminal simulation for quantum operations.
-    - **Secure Client-Side Decryption**: Keys are unwrapped in the browser for maximum security.
+- **Funcionalidades**:
+    - **Medidor de Entropia**: Visualização em tempo real da entropia disponível no sistema.
+    - **Logs em Tempo Real**: Simulação de terminal para as operações quânticas.
+    - **Decriptografia Segura no Cliente**: As chaves são desembrulhadas (unwrapped) no navegador para máxima segurança.
 
 ---
 
 ## 🔑 Quantum Key Manager API
 
-The `quantum-keymanager` service runs on port **8082** and provides endpoints to generate and export RSA keys using quantum entropy.
+O serviço `quantum-keymanager` é executado na porta **8082** e fornece endpoints para gerar e exportar chaves RSA usando entropia quântica.
 
-### 1. Generate a New RSA Key
-Generates a key pair (Public/Private), encrypts the private key with a system Master Key, and stores it. It consumes quantum entropy to seed the generator.
+### 1. Gerar uma Nova Chave RSA
+Gera um par de chaves (Pública/Privada), criptografa a chave privada com uma Master Key do sistema e a armazena. Consome entropia quântica para alimentar o gerador.
 
 ```bash
 curl -X POST http://localhost:8082/api/v1/keys \
   -H "Content-Type: application/json" \
-  -d '{"alias": "my-secure-key", "keySize": 2048}'
+  -d '{"alias": "minha-chave-segura", "keySize": 2048}'
 ```
 
-### 2. List All Keys
-Returns the list of stored keys (ID, Alias, Public Key, and Creation Date).
+### 2. Listar Todas as Chaves
+Retorna a lista de chaves armazenadas (ID, Alias, Chave Pública e Data de Criação).
 
 ```bash
 curl -X GET http://localhost:8082/api/v1/keys
 ```
 
-### 3. Securely Export a Private Key
-Uses **Key Wrapping**: consumes fresh quantum entropy to create a temporary Transport Key (AES-256), which encrypts the requested Private Key for safe transport.
+### 3. Exportar uma Chave Privada com Segurança
+Utiliza **Key Wrapping**: consome nova entropia quântica para criar uma Chave de Transporte temporária (AES-256), que criptografa a Chave Privada solicitada para um transporte seguro.
 
 ```bash
-# Replace {id} with the actual Key ID obtained from the list command
+# Substitua {id} pelo ID da chave obtido no comando de listagem
 curl -X POST http://localhost:8082/api/v1/keys/1/export
 ```
 
 ---
 
-## 🔐 Security Verification (Testing the Export)
+## 🔐 Verificação de Segurança (Testando a Exportação)
 
-To verify that the exported private key is valid and can be decrypted by the recipient, you can use the provided Python verification scripts or the **Frontend UI**. This process confirms the **Key Wrapping** logic works as expected.
+Para verificar se a chave privada exportada é válida e pode ser decriptografada pelo destinatário, você pode usar os scripts de verificação em Python fornecidos ou a própria **Interface Web**. Este processo confirma que a lógica de **Key Wrapping** funciona como esperado.
 
-### 1. Requirements
-You don't need to install Python or dependencies locally if you have Docker. The verification scripts are located in `scripts/`.
+### 1. Requisitos
+Você não precisa instalar Python ou dependências localmente se tiver o Docker. Os scripts de verificação estão localizados em `scripts/`.
 
-### 2. Run Automated Verification (Recommended)
-We provide an automated script that fetches the public key from the API, exports the private key, and runs the audit inside a Docker container:
+### 2. Executar Verificação Automatizada (Recomendado)
+Nós fornecemos um script automatizado que busca a chave pública da API, exporta a chave privada e executa a auditoria dentro de um contêiner Docker:
 
 ```bash
-# Run from the project root
+# Execute a partir da raiz do projeto
 ./scripts/audit_flow.sh <key_id>
 
-# Example for Key ID 1:
+# Exemplo para a Chave de ID 1:
 ./scripts/audit_flow.sh 1
 ```
 
 ---
 
-## Project Structure
+## Estrutura do Projeto
 
-- `src/`: Java Spring Boot source code (Quantum API).
-- `quantum-keymanager/`: Java Spring Boot source code (Key Manager).
-- `quantum-keymanager-ui/`: React/Vite source code (Frontend).
-- `docker-compose.yml`: Orchestration for all services.
-- `render.yaml`: Render.com deployment configuration.
-- `scripts/`: Python scripts for security auditing.
+- `src/`: Código-fonte do Spring Boot (Quantum API).
+- `quantum-keymanager/`: Código-fonte do Spring Boot (Key Manager).
+- `quantum-keymanager-ui/`: Código-fonte do React/Vite (Frontend).
+- `docker-compose.yml`: Orquestração de todos os serviços.
+- `render.yaml`: Configuração de deploy para o Render.com.
+- `scripts/`: Scripts em Python para auditoria de segurança.
 
-## 👨‍💻 Developed by
+## 👨‍💻 Desenvolvido por
 **Leporoni Tech Solutions**  
 📧 [leporonitech@gmail.com](mailto:leporonitech@gmail.com)
 

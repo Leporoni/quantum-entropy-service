@@ -1,11 +1,29 @@
+# -*- coding: utf-8 -*-
+"""
+Este script é um executor de auditoria de linha de comando.
+
+Ele simula o processo de um terceiro que recebe um payload de chave exportada
+(em formato JSON) e uma chave pública, e usa o kit de ferramentas `verify_key`
+para confirmar a integridade e funcionalidade do par de chaves.
+"""
+
 import json
 import sys
 import verify_key
 
 def main():
+    """
+    Função principal que orquestra o processo de auditoria.
+
+    Etapas:
+    1. Parseia os argumentos da linha de comando (caminho do JSON, chave pública).
+    2. Lê o arquivo JSON contendo a chave privada criptografada e a chave de transporte.
+    3. Chama `verify_key.decrypt_private_key` para descriptografar o payload.
+    4. Chama `verify_key.validate_key_pair` para realizar a validação matemática e funcional.
+    """
     if len(sys.argv) < 3:
-        print("Usage: python audit_key.py <json_file_path> <public_key_string>")
-        print("Example: python audit_key.py key_export.json \"MIIBIjAN...\"")
+        print("Uso: python audit_key.py <caminho_do_json> <string_chave_publica>")
+        print("Exemplo: python audit_key.py chave_exportada.json \"MIIBIjAN...\"")
         sys.exit(1)
 
     json_file_path = sys.argv[1]
@@ -18,34 +36,34 @@ def main():
         
         # Validar estrutura do JSON
         if 'encryptedPrivateKey' not in data or 'transportKey' not in data:
-            print("[ERROR] Invalid JSON format. Missing 'encryptedPrivateKey' or 'transportKey'.")
+            print("[ERRO] Formato de JSON inválido. Faltando 'encryptedPrivateKey' ou 'transportKey'.")
             sys.exit(1)
 
         enc_priv_key = data['encryptedPrivateKey']
         transport_key = data['transportKey']
 
-        print(f"[*] Loaded export data from: {json_file_path}")
-        print(f"[*] Algorithm: {data.get('algorithm', 'Unknown')}")
-        print("--- Initiating Audit ---")
+        print(f"[*] Dados de exportação carregados de: {json_file_path}")
+        print(f"[*] Algoritmo: {data.get('algorithm', 'Desconhecido')}")
+        print("--- Iniciando Auditoria ---")
 
-        # 1. Descriptografar
+        # 1. Descriptografar a chave privada usando a chave de transporte
         decrypted_pem = verify_key.decrypt_private_key(enc_priv_key, transport_key)
 
-        if decrypted_pem.startswith("Error"):
-            print(f"[ERROR] Decryption failed: {decrypted_pem}")
+        if decrypted_pem.startswith("Erro"):
+            print(f"[ERRO] Falha na descriptografia: {decrypted_pem}")
             sys.exit(1)
         
-        print("[V] Decryption Successful (Transport Layer Verified).")
+        print("[V] Descriptografia bem-sucedida (Camada de Transporte Verificada).")
 
-        # 2. Validar
+        # 2. Validar o par de chaves (privada descriptografada vs. pública original)
         verify_key.validate_key_pair(decrypted_pem, public_key_string)
 
     except FileNotFoundError:
-        print(f"[ERROR] File not found: {json_file_path}")
+        print(f"[ERRO] Arquivo não encontrado: {json_file_path}")
     except json.JSONDecodeError:
-        print(f"[ERROR] Failed to parse JSON from file: {json_file_path}")
+        print(f"[ERRO] Falha ao parsear JSON do arquivo: {json_file_path}")
     except Exception as e:
-        print(f"[ERROR] Unexpected error: {str(e)}")
+        print(f"[ERRO] Erro inesperado: {str(e)}")
 
 if __name__ == "__main__":
     main()
