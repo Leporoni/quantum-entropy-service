@@ -34,14 +34,23 @@ public class EntropyCollectorScheduler {
             if (count < 20) {
                 log.info("Entropy low ({}). Starting rapid refill...", count);
 
+                int consecutiveFailures = 0;
+                final int maxConsecutiveFailures = 10;
+
                 // Fill up to 50
-                while (count < 50) {
+                while (count < 50 && consecutiveFailures < maxConsecutiveFailures) {
                     if (fetchAndSave()) {
                         count++;
-                        Thread.sleep(200); // 200ms delay between fetches (Fast Mode)
+                        consecutiveFailures = 0; // Reset on success
+                        sleep(200); // 200ms delay between fetches (Fast Mode)
                     } else {
-                        Thread.sleep(2000); // Slow down on error
+                        consecutiveFailures++;
+                        sleep(2000); // Slow down on error
                     }
+                }
+
+                if (consecutiveFailures >= maxConsecutiveFailures) {
+                    log.warn("Stopped refill after {} consecutive failures. Current count: {}", maxConsecutiveFailures, count);
                 }
                 log.info("Entropy refilled. Current count: {}", count);
             }
@@ -201,5 +210,12 @@ public class EntropyCollectorScheduler {
         } catch (Exception e) {
             return false;
         }
+    }
+
+    /**
+     * Sleep method that can be overridden in tests to avoid actual waiting.
+     */
+    void sleep(long millis) throws InterruptedException {
+        Thread.sleep(millis);
     }
 }
