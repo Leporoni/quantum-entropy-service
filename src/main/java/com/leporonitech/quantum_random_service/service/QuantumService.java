@@ -6,6 +6,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.util.Base64;
 import java.util.HexFormat;
 
@@ -34,17 +37,50 @@ public class QuantumService {
         log.debug("Raw quantum hex string received from LfD API: {}", hexString);
 
         // Convert Hex string to byte array
-        byte[] bytes;
+        byte[] quantumBytes;
         try {
-            bytes = HexFormat.of().parseHex(hexString);
+            quantumBytes = HexFormat.of().parseHex(hexString);
         } catch (IllegalArgumentException e) {
              log.error("Failed to parse Hex string from LfD API: {}", hexString, e);
              throw new RuntimeException("Invalid Hex string received from LfD API.", e);
         }
 
-        String base64String = Base64.getEncoder().encodeToString(bytes);
-        log.info("Generated Base64 string: {}", base64String);
+        // NIST SP 800-90C: Mix quantum entropy with local system entropy
+        // This provides defense-in-depth in case the quantum source is compromised
+        byte[] mixedEntropy = mixWithSystemEntropy(quantumBytes);
+
+        String base64String = Base64.getEncoder().encodeToString(mixedEntropy);
+        log.info("Generated Base64 string with mixed entropy (quantum + system): {}", base64String);
 
         return base64String;
+    }
+
+    /**
+     * Mixes quantum entropy with local system entropy using SHA-256.
+     * Following NIST SP 800-90C recommendations for entropy source composition.
+     *
+     * @param quantumBytes the quantum random bytes from LfD API
+     * @return mixed entropy bytes
+     */
+    protected byte[] mixWithSystemEntropy(byte[] quantumBytes) {
+        try {
+            // Generate local system entropy of the same size
+            byte[] systemEntropy = new byte[quantumBytes.length];
+            SecureRandom.getInstanceStrong().nextBytes(systemEntropy);
+
+            // Cryptographic mixing using SHA-256
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            digest.update(quantumBytes);
+            digest.update(systemEntropy);
+            byte[] mixedSeed = digest.digest();
+
+            log.debug("Mixed {} bytes of quantum entropy with {} bytes of system entropy. Output: {} bytes",
+                    quantumBytes.length, systemEntropy.length, mixedSeed.length);
+
+            return mixedSeed;
+        } catch (NoSuchAlgorithmException e) {
+            log.error("Failed to mix entropy: SHA-256 or SecureRandom not available", e);
+            throw new RuntimeException("Failed to mix entropy with system entropy", e);
+        }
     }
 }

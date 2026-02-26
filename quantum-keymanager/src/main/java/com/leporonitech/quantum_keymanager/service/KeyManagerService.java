@@ -11,7 +11,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.security.*;
 import java.util.Base64;
-import java.util.Base64;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import org.springframework.beans.factory.annotation.Value;
@@ -52,24 +51,41 @@ public class KeyManagerService {
         }
         quantumDataRepository.saveAll(entropyBatch);
 
-        byte[] seed = seedBuffer.toByteArray();
+        byte[] quantumSeed = seedBuffer.toByteArray();
 
-        // 2. Inicializar SecureRandom com a semente quântica
-        SecureRandom quantumRandom = SecureRandom.getInstance("SHA1PRNG");
-        quantumRandom.setSeed(seed);
+        // 2. Obter entropia do sistema (Local Entropy) para mixagem (NIST Recommendation)
+        byte[] systemEntropy = new byte[quantumSeed.length];
+        SecureRandom.getInstanceStrong().nextBytes(systemEntropy);
 
-        // 3. Gerar par de chaves RSA
+        // 3. Mixagem Criptográfica (Quantum + System) usando SHA-512
+        MessageDigest digest = MessageDigest.getInstance("SHA-512");
+        digest.update(quantumSeed);
+        digest.update(systemEntropy);
+        byte[] mixedSeed = digest.digest();
+
+        // 4. Inicializar SecureRandom usando DRBG (NIST SP 800-90A)
+        SecureRandom combinedRandom;
+        try {
+            // Tenta obter DRBG explicitamente (disponível no Java 9+)
+            combinedRandom = SecureRandom.getInstance("DRBG");
+        } catch (NoSuchAlgorithmException e) {
+            // Fallback para o gerador forte do sistema se DRBG específico não for encontrado
+            combinedRandom = SecureRandom.getInstanceStrong();
+        }
+        combinedRandom.setSeed(mixedSeed);
+
+        // 5. Gerar par de chaves RSA
         KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
-        keyGen.initialize(keySize, quantumRandom);
+        keyGen.initialize(keySize, combinedRandom);
         KeyPair pair = keyGen.generateKeyPair();
 
         String publicKeyBase64 = Base64.getEncoder().encodeToString(pair.getPublic().getEncoded());
         String privateKeyBase64 = Base64.getEncoder().encodeToString(pair.getPrivate().getEncoded());
 
-        // 4. Encriptar a chave privada com a Master Key
+        // 6. Encriptar a chave privada com a Master Key
         String privateKeyEncrypted = encryptionService.encrypt(privateKeyBase64);
 
-        // 5. Salvar no banco
+        // 7. Salvar no banco
         RsaKey rsaKey = new RsaKey();
         rsaKey.setAlias(alias);
         rsaKey.setPublicKey(publicKeyBase64);
