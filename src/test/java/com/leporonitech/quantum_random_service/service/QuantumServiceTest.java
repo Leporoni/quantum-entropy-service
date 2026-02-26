@@ -63,9 +63,9 @@ class QuantumServiceTest {
         // Act
         String result = quantumService.getQuantumNumbersAsBase64(5);
 
-        // Assert - Result should be SHA-256 hash (32 bytes) encoded in Base64
+        // Assert - Result should preserve original length (5 bytes) after mixing
         byte[] decodedResult = Base64.getDecoder().decode(result);
-        assertEquals(32, decodedResult.length, "SHA-256 output should be 32 bytes");
+        assertEquals(5, decodedResult.length, "Output should preserve original input length");
     }
 
     @Test
@@ -159,16 +159,30 @@ class QuantumServiceTest {
     }
 
     @Test
-    void mixWithSystemEntropyShouldReturn32Bytes() {
+    void mixWithSystemEntropyShouldPreserveInputLength() {
         // Arrange
-        byte[] quantumBytes = "test_quantum_data".getBytes();
+        byte[] quantumBytes = "test_quantum_data".getBytes(); // 17 bytes
 
         // Act
         byte[] result = quantumService.mixWithSystemEntropy(quantumBytes);
 
         // Assert
         assertNotNull(result);
-        assertEquals(32, result.length, "SHA-256 should produce 32 bytes");
+        assertEquals(quantumBytes.length, result.length, "Output should preserve input length");
+    }
+
+    @Test
+    void mixWithSystemEntropyShouldPreserve128Bytes() {
+        // Arrange - 128 bytes is the typical quantum request size
+        byte[] quantumBytes = new byte[128];
+        new SecureRandom().nextBytes(quantumBytes);
+
+        // Act
+        byte[] result = quantumService.mixWithSystemEntropy(quantumBytes);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(128, result.length, "Output should preserve 128-byte input length");
     }
 
     @Test
@@ -186,48 +200,5 @@ class QuantumServiceTest {
                 Base64.getEncoder().encodeToString(result2),
                 "Each call should produce different results due to system entropy"
         );
-    }
-
-    @Test
-    void mixWithSystemEntropyShouldProduceDeterministicResultWithMockedRandom() throws Exception {
-        // This test verifies the mixing logic by using a deterministic "random" source
-        // Arrange
-        byte[] quantumBytes = HexFormat.of().parseHex("0102030405060708");
-
-        // Create a QuantumService with mocked SecureRandom behavior
-        QuantumService testService = new QuantumService(lfdQuantumApiClient) {
-            @Override
-            protected byte[] mixWithSystemEntropy(byte[] quantumBytes) {
-                try {
-                    // Use deterministic "system entropy" for testing
-                    byte[] systemEntropy = HexFormat.of().parseHex("0a0b0c0d0e0f1011");
-
-                    MessageDigest digest = MessageDigest.getInstance("SHA-256");
-                    digest.update(quantumBytes);
-                    digest.update(systemEntropy);
-                    return digest.digest();
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
-            }
-        };
-
-        // Act
-        byte[] result = testService.mixWithSystemEntropy(quantumBytes);
-
-        // Assert
-        assertNotNull(result);
-        assertEquals(32, result.length);
-
-        // Verify the hash is deterministic (same inputs = same output)
-        byte[] expectedHash = calculateExpectedHash(quantumBytes, HexFormat.of().parseHex("0a0b0c0d0e0f1011"));
-        assertArrayEquals(expectedHash, result);
-    }
-
-    private byte[] calculateExpectedHash(byte[] quantum, byte[] system) throws Exception {
-        MessageDigest digest = MessageDigest.getInstance("SHA-256");
-        digest.update(quantum);
-        digest.update(system);
-        return digest.digest();
     }
 }
