@@ -66,6 +66,44 @@ The web interface runs on port **3000** and provides a high-end dashboard to man
 
 ---
 
+## 🔐 NIST SP 800-90C Entropy Mixing
+
+This system implements **cryptographic entropy mixing** following NIST SP 800-90C recommendations for entropy source composition. This provides defense-in-depth security in case the quantum source is compromised.
+
+### How It Works
+
+The entropy mixing occurs at two layers:
+
+#### 1. Quantum Service Layer (SHA-256 Mixing)
+When quantum random bytes are received from the LfD API, they are immediately mixed with local system entropy:
+
+```
+Quantum Entropy (from LfD) + System Entropy (SecureRandom) → SHA-256 → Mixed Entropy
+```
+
+#### 2. Key Manager Layer (SHA-512 + DRBG)
+When generating RSA keys, a second mixing layer is applied:
+
+```
+Quantum Seed + System Entropy → SHA-512 → DRBG (NIST SP 800-90A) → SecureRandom
+```
+
+### Security Benefits
+
+- **Defense-in-Depth**: Even if the quantum source is compromised, the attacker cannot predict the output
+- **NIST Compliance**: Follows SP 800-90C recommendations for entropy source composition
+- **Hybrid Security**: Combines the unpredictability of quantum randomness with the proven security of system CSPRNG
+- **DRBG Support**: Uses NIST-approved Deterministic Random Bit Generator when available (Java 9+)
+
+### Implementation Details
+
+| Component | Algorithm | Standard |
+|-----------|-----------|----------|
+| QuantumService | SHA-256 | NIST SP 800-90C |
+| KeyManagerService | SHA-512 + DRBG | NIST SP 800-90A/C |
+
+---
+
 ## 🔑 Quantum Key Manager API
 
 The `quantum-keymanager` service runs on port **8082** and provides endpoints to generate and export RSA keys using quantum entropy.
