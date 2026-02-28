@@ -51,6 +51,7 @@ public class QuantumService {
 
         String base64String = Base64.getEncoder().encodeToString(mixedEntropy);
         log.info("Generated Base64 string with mixed entropy (quantum + system): {}", base64String);
+        log.info("Quantum entropy generation completed successfully. Total bytes: {}", mixedEntropy.length);
 
         return base64String;
     }
