@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.leporonitech.quantum_keymanager.model.QuantumData;
 import com.leporonitech.quantum_keymanager.repository.QuantumDataRepository;
+import com.leporonitech.quantum_keymanager.validation.EntropyValidatorComposite;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -12,6 +13,14 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.Base64;
+
+/**
+ * Scheduler responsible for collecting and validating quantum entropy.
+ * Implements hysteresis logic to maintain optimal entropy pool size.
+ * 
+ * Uses Strategy Pattern via EntropyValidatorComposite for NIST SP 800-90B validation.
+ */
 @Component
 @Profile("memory")
 @RequiredArgsConstructor
@@ -21,6 +30,7 @@ public class EntropyCollectorScheduler {
     private final QuantumDataRepository quantumDataRepository;
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
+    private final EntropyValidatorComposite entropyValidator;
 
     @Value("${API_BASE_URL:http://localhost:8081}")
     private String apiBaseUrl;
@@ -71,16 +81,23 @@ public class EntropyCollectorScheduler {
             String dataBase64 = root.path("data").asText();
 
             if (dataBase64 != null && !dataBase64.isEmpty()) {
-                // NIST SP 800-90B Lite Validation
-                if (!isValidEntropy(dataBase64)) {
-                    log.error("Entropy validation failed. Discarding data.");
+                // Decode Base64 and optionally hex
+                byte[] rawBytes = Base64.getDecoder().decode(dataBase64);
+                byte[] data = tryDecodeHex(rawBytes);
+
+                // NIST SP 800-90B Lite Validation using Strategy Pattern
+                if (!entropyValidator.validate(data)) {
+                    log.error("Entropy validation failed: {}. Discarding data.", entropyValidator.getFailureReason());
                     return false;
                 }
 
-                QuantumData data = new QuantumData();
-                data.setDataBase64(dataBase64);
-                data.setUsed(false);
-                quantumDataRepository.save(data);
+                QuantumData quantumData = new QuantumData();
+                quantumData.setDataBase64(dataBase64);
+                quantumData.setUsed(false);
+                QuantumData savedData = quantumDataRepository.save(quantumData);
+                log.info("Entropy saved to database successfully. ID: {}, Size: {} bytes", 
+                    savedData.getId(), 
+                    data.length);
                 return true;
             }
         } catch (Exception e) {
@@ -89,56 +106,19 @@ public class EntropyCollectorScheduler {
         return false;
     }
 
-    // Comprehensive Entropy Validation (NIST SP 800-90B Lite)
-    private boolean isValidEntropy(String base64Data) {
-        try {
-            byte[] rawBytes = java.util.Base64.getDecoder().decode(base64Data);
-
-            // 1. Hex Decoding Attempt (If data is actually Hex string)
-            byte[] data = tryDecodeHex(rawBytes);
-
-            // 2. Minimum Length Check
-            if (data.length < 32) {
-                log.warn("Validation Failed: Data too short ({} bytes)", data.length);
-                return false;
-            }
-
-            // 3. Repetition Check (Monobit / Runs test simplified)
-            if (hasExcessiveRepetition(data)) {
-                log.warn("Validation Failed: Excessive repetition detected");
-                return false;
-            }
-
-            // 4. Shannon Entropy Test
-            double entropy = calculateShannonEntropy(data);
-            // Threshold: 6.0 bits/byte (max 8.0, but limited by sample size N=128)
-            // A perfect distribution of 128 unique bytes yields 7.0 entropy.
-            // Random collisions reduce this further, so 6.0 is a safe lower bound.
-            if (entropy < 6.0) {
-                log.warn("Validation Failed: Low Shannon Entropy ({})", String.format("%.2f", entropy));
-                return false;
-            }
-
-            // 5. Compression Test (Deflate)
-            // Random data should NOT be compressible.
-            if (isCompressible(data)) {
-                log.warn("Validation Failed: Data is compressible (pattern detected)");
-                return false;
-            }
-
-            return true;
-        } catch (IllegalArgumentException e) {
-            log.warn("Validation Failed: Invalid Base64");
-            return false;
-        }
-    }
-
+    /**
+     * Attempts to decode hex-encoded data.
+     * Some quantum APIs return hex strings instead of raw bytes.
+     *
+     * @param input the byte array to check
+     * @return decoded bytes if input was hex, otherwise original input
+     */
     private byte[] tryDecodeHex(byte[] input) {
         // Check if bytes are printable ASCII Hex
         boolean isHex = true;
-        if (input.length % 2 != 0)
+        if (input.length % 2 != 0) {
             isHex = false;
-        else {
+        } else {
             for (byte b : input) {
                 if (!((b >= '0' && b <= '9') || (b >= 'a' && b <= 'f') || (b >= 'A' && b <= 'F'))) {
                     isHex = false;
@@ -164,52 +144,6 @@ public class EntropyCollectorScheduler {
             }
         }
         return input;
-    }
-
-    private boolean hasExcessiveRepetition(byte[] data) {
-        int repetitions = 0;
-        for (int i = 1; i < data.length; i++) {
-            if (data[i] == data[i - 1])
-                repetitions++;
-        }
-        // Fail if > 20% bytes are repeated
-        return repetitions > data.length * 0.2;
-    }
-
-    private double calculateShannonEntropy(byte[] data) {
-        int[] frequencies = new int[256];
-        for (byte b : data) {
-            frequencies[b & 0xFF]++;
-        }
-
-        double entropy = 0;
-        double total = data.length;
-
-        for (int count : frequencies) {
-            if (count > 0) {
-                double p = count / total;
-                entropy -= p * (Math.log(p) / Math.log(2));
-            }
-        }
-        return entropy;
-    }
-
-    private boolean isCompressible(byte[] data) {
-        try {
-            java.util.zip.Deflater deflater = new java.util.zip.Deflater();
-            deflater.setInput(data);
-            deflater.finish();
-
-            byte[] buffer = new byte[data.length + 100];
-            int compressedSize = deflater.deflate(buffer);
-            deflater.end();
-
-            // If compressed size is < 80% of original, it is compressible => Not random
-            // Real random data usually expands when compressed due to overhead.
-            return compressedSize < (data.length * 0.8);
-        } catch (Exception e) {
-            return false;
-        }
     }
 
     /**

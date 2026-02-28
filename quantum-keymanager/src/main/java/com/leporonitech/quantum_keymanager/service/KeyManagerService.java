@@ -85,12 +85,13 @@ public class KeyManagerService {
         // 6. Encriptar a chave privada com a Master Key
         String privateKeyEncrypted = encryptionService.encrypt(privateKeyBase64);
 
-        // 7. Salvar no banco
-        RsaKey rsaKey = new RsaKey();
-        rsaKey.setAlias(alias);
-        rsaKey.setPublicKey(publicKeyBase64);
-        rsaKey.setPrivateKeyEncrypted(privateKeyEncrypted);
-        rsaKey.setKeySize(keySize);
+        // 7. Salvar no banco usando Builder Pattern
+        RsaKey rsaKey = RsaKey.builder()
+                .alias(alias)
+                .publicKey(publicKeyBase64)
+                .privateKeyEncrypted(privateKeyEncrypted)
+                .keySize(keySize)
+                .build();
 
         return rsaKeyRepository.save(rsaKey);
     }
