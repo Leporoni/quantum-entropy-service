@@ -1,12 +1,23 @@
 package com.leporonitech.quantum_keymanager.model;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
+
 import java.time.LocalDateTime;
 
+/**
+ * Entity representing an RSA key pair stored in the vault.
+ * Uses Builder Pattern for cleaner object construction.
+ */
 @Entity
 @Table(name = "rsa_keys")
 @Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class RsaKey {
 
     @Id
@@ -26,10 +37,13 @@ public class RsaKey {
     private int keySize;
 
     @Column(name = "created_at")
-    private LocalDateTime createdAt;
+    @Builder.Default
+    private LocalDateTime createdAt = LocalDateTime.now();
 
     @PrePersist
     protected void onCreate() {
-        createdAt = LocalDateTime.now();
+        if (createdAt == null) {
+            createdAt = LocalDateTime.now();
+        }
     }
 }

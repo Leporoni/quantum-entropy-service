@@ -3,6 +3,7 @@ package com.leporonitech.quantum_keymanager.scheduler;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.leporonitech.quantum_keymanager.model.QuantumData;
 import com.leporonitech.quantum_keymanager.repository.QuantumDataRepository;
+import com.leporonitech.quantum_keymanager.validation.EntropyValidatorComposite;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,10 +31,13 @@ class EntropyCollectorSchedulerTest {
     @Spy
     private ObjectMapper objectMapper = new ObjectMapper();
 
+    @Spy
+    private EntropyValidatorComposite entropyValidator = new EntropyValidatorComposite();
+
     // Testable subclass that overrides sleep to avoid actual waiting
     private static class TestableEntropyCollectorScheduler extends EntropyCollectorScheduler {
-        public TestableEntropyCollectorScheduler(QuantumDataRepository repo, RestTemplate restTemplate, ObjectMapper mapper) {
-            super(repo, restTemplate, mapper);
+        public TestableEntropyCollectorScheduler(QuantumDataRepository repo, RestTemplate restTemplate, ObjectMapper mapper, EntropyValidatorComposite validator) {
+            super(repo, restTemplate, mapper, validator);
         }
 
         @Override
@@ -46,7 +50,7 @@ class EntropyCollectorSchedulerTest {
 
     @BeforeEach
     void setUp() {
-        scheduler = new TestableEntropyCollectorScheduler(quantumDataRepository, restTemplate, objectMapper);
+        scheduler = new TestableEntropyCollectorScheduler(quantumDataRepository, restTemplate, objectMapper, entropyValidator);
         ReflectionTestUtils.setField(scheduler, "apiBaseUrl", "http://localhost:8081");
     }
 
