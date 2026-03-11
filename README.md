@@ -52,6 +52,34 @@ This is the easiest way to run the entire system.
     docker compose down
     ```
 
+## ⛩️ Kong Gateway
+
+The project now includes an API Gateway (Kong) to centralize access, implement rate limiting, and prepare for future authentication and observability.
+
+### Accessing via Gateway
+When the gateway is running, you can access all services through a single port (**8000**):
+
+| Service | Original URL | Gateway URL |
+|---------|--------------|-------------|
+| **Frontend UI** | [http://localhost:3000](http://localhost:3000) | [http://localhost:8000](http://localhost:8000) |
+| **Quantum API** | [http://localhost:8081/api/v1/...](http://localhost:8081/api/v1/...) | [http://localhost:8000/api/v1/quantum-random](http://localhost:8000/api/v1/quantum-random) |
+| **Key Manager** | [http://localhost:8082/api/v1/...](http://localhost:8082/api/v1/...) | [http://localhost:8000/api/v1/keys](http://localhost:8000/api/v1/keys) |
+
+### Running the Gateway
+1. **Start the main services first**:
+    ```bash
+    docker compose up -d
+    ```
+2. **Start the Kong Gateway**:
+    ```bash
+    docker compose -f docker-compose.kong.yml up -d
+    ```
+
+### Rate Limiting
+The Gateway is pre-configured with a **Rate Limiting** plugin:
+- **Limit**: 100 requests per minute.
+- **Policy**: Local (DB-less).
+
 ---
 
 ## 🎨 Quantum Key Manager UI
