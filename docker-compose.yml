@@ -34,6 +34,30 @@ services:
       - quantum-net
     restart: unless-stopped
 
+  kong:
+    image: kong:latest
+    container_name: kong-gateway
+    environment:
+      - KONG_DATABASE=off
+      - KONG_DECLARATIVE_CONFIG=/usr/local/kong/declarative/kong.yml
+      - KONG_PROXY_ACCESS_LOG=/dev/stdout
+      - KONG_ADMIN_ACCESS_LOG=/dev/stdout
+      - KONG_PROXY_ERROR_LOG=/dev/stderr
+      - KONG_ADMIN_ERROR_LOG=/dev/stderr
+    volumes:
+      - ./kong:/usr/local/kong/declarative/
+    ports:
+      - "8000:8000"   # Proxy HTTP
+      - "8443:8443"   # Proxy HTTPS
+      - "8001:8001"   # Admin API (Local only)
+    depends_on:
+      - quantum-service
+      - quantum-keymanager
+      - quantum-keymanager-ui
+    networks:
+      - quantum-net
+    restart: unless-stopped
+
 networks:
   quantum-net:
     driver: bridge
