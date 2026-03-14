@@ -52,6 +52,31 @@ This is the easiest way to run the entire system.
     docker compose down
     ```
 
+## ⛩️ Kong Gateway
+
+The project now includes an API Gateway (Kong) to centralize access, implement rate limiting, and prepare for future authentication and observability.
+
+### Running the Project
+1. **Start all services**:
+    ```bash
+    docker compose up -d --build
+    ```
+    This command will start the Quantum APIs, the React UI, and the **Kong Gateway** in the background.
+
+### Accessing via Gateway (Recommended)
+You can access all services through a single entry point (the Kong Gateway) on port **8000**:
+
+| Service | Gateway URL |
+|---------|-------------|
+| **Frontend UI** | [http://localhost:8000](http://localhost:8000) |
+| **Quantum API** | [http://localhost:8000/api/v1/quantum-random](http://localhost:8000/api/v1/quantum-random) |
+| **Key Manager** | [http://localhost:8000/api/v1/keys](http://localhost:8000/api/v1/keys) |
+
+### Rate Limiting
+The Gateway is pre-configured with a **Rate Limiting** plugin:
+- **Limit**: 100 requests per minute.
+- **Policy**: Local (DB-less).
+
 ---
 
 ## 🎨 Quantum Key Manager UI

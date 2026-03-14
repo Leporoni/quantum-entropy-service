@@ -1,0 +1,33 @@
+_format_version: "3.0"
+
+services:
+  - name: quantum-service
+    url: http://quantum-service:10000
+    routes:
+      - name: quantum-route
+        paths:
+          - /api/v1/quantum-random
+        strip_path: false
+
+  - name: keymanager
+    url: http://quantum-keymanager:10000
+    routes:
+      - name: keys-route
+        paths:
+          - /api/v1/keys
+          - /api/v1/quantum-entropy
+        strip_path: false
+
+  - name: ui
+    url: http://quantum-keymanager-ui:80
+    routes:
+      - name: ui-route
+        paths:
+          - /
+        strip_path: false
+
+plugins:
+  - name: rate-limiting
+    config:
+      minute: 100
+      policy: local
