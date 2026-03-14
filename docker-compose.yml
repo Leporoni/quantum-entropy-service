@@ -35,7 +35,8 @@ services:
     restart: unless-stopped
 
   kong:
-    image: kong:latest
+    image: kong:3.9.0
+    platform: linux/amd64
     container_name: kong-gateway
     environment:
       - KONG_DATABASE=off
