@@ -8,6 +8,11 @@ services:
         paths:
           - /api/v1/quantum-random
         strip_path: false
+    plugins:
+      - name: rate-limiting
+        config:
+          minute: 100
+          policy: local
 
   - name: keymanager
     url: http://quantum-keymanager:10000
@@ -17,6 +22,11 @@ services:
           - /api/v1/keys
           - /api/v1/quantum-entropy
         strip_path: false
+    plugins:
+      - name: rate-limiting
+        config:
+          minute: 100
+          policy: local
 
   - name: grafana
     url: http://grafana:3000
@@ -55,8 +65,4 @@ services:
         regex_priority: 1
 
 plugins:
-  - name: rate-limiting
-    config:
-      minute: 100
-      policy: local
   - name: prometheus
