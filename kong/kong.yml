@@ -18,14 +18,6 @@ services:
           - /api/v1/quantum-entropy
         strip_path: false
 
-  - name: ui
-    url: http://quantum-keymanager-ui:80
-    routes:
-      - name: ui-route
-        paths:
-          - /
-        strip_path: false
-
   - name: grafana
     url: http://grafana:3000
     routes:
@@ -33,6 +25,7 @@ services:
         paths:
           - /grafana
         strip_path: false
+        regex_priority: 100
 
   - name: prometheus
     url: http://prometheus:9090
@@ -41,6 +34,7 @@ services:
         paths:
           - /prometheus
         strip_path: false
+        regex_priority: 100
 
   - name: jaeger
     url: http://jaeger:16686
@@ -49,6 +43,16 @@ services:
         paths:
           - /jaeger
         strip_path: false
+        regex_priority: 100
+
+  - name: ui
+    url: http://quantum-keymanager-ui:80
+    routes:
+      - name: ui-route
+        paths:
+          - /
+        strip_path: false
+        regex_priority: 1
 
 plugins:
   - name: rate-limiting
@@ -56,4 +60,3 @@ plugins:
       minute: 100
       policy: local
   - name: prometheus
-
