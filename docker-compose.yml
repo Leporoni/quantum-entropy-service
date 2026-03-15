@@ -72,7 +72,8 @@ services:
       - "14268:14268"  # HTTP spans
       - "4318:4318"    # OTLP HTTP
     environment:
-      COLLECTOR_OTLP_ENABLED: true
+      - COLLECTOR_OTLP_ENABLED=true
+      - QUERY_BASE_PATH=/jaeger
     networks:
       - quantum-net
     restart: unless-stopped
@@ -88,6 +89,8 @@ services:
       - prometheus-data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.external-url=http://localhost:8000/prometheus/'
     networks:
       - quantum-net
     restart: unless-stopped
@@ -100,6 +103,8 @@ services:
       - "3001:3000"
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SERVER_ROOT_URL=%(protocol)s://%(domain)s:%(http_port)s/grafana/
+      - GF_SERVER_SERVE_FROM_SUB_PATH=true
     depends_on:
       - prometheus
       - jaeger

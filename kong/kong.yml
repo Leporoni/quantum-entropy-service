@@ -26,6 +26,30 @@ services:
           - /
         strip_path: false
 
+  - name: grafana
+    url: http://grafana:3000
+    routes:
+      - name: grafana-route
+        paths:
+          - /grafana
+        strip_path: false
+
+  - name: prometheus
+    url: http://prometheus:9090
+    routes:
+      - name: prometheus-route
+        paths:
+          - /prometheus
+        strip_path: false
+
+  - name: jaeger
+    url: http://jaeger:16686
+    routes:
+      - name: jaeger-route
+        paths:
+          - /jaeger
+        strip_path: false
+
 plugins:
   - name: rate-limiting
     config:
