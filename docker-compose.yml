@@ -106,9 +106,13 @@ services:
       - ./grafana/dashboards:/var/lib/grafana/dashboards
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SERVER_DOMAIN=localhost
+      - GF_SERVER_HTTP_PORT=3000
+      - GF_SERVER_PROTOCOL=http
       - GF_SERVER_ROOT_URL=http://localhost:8000/grafana/
       - GF_SERVER_SERVE_FROM_SUB_PATH=true
       - GF_SECURITY_CSRF_TRUSTED_ORIGINS=http://localhost:8000
+      - GF_SECURITY_COOKIE_SAMESITE=lax
     depends_on:
       - prometheus
       - jaeger
