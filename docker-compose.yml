@@ -45,6 +45,9 @@ services:
       - KONG_ADMIN_ACCESS_LOG=/dev/stdout
       - KONG_PROXY_ERROR_LOG=/dev/stderr
       - KONG_ADMIN_ERROR_LOG=/dev/stderr
+      - KONG_TRACING_INSTRUMENTATIONS=all
+      - KONG_TRACING_SAMPLING_RATE=1.0
+      - KONG_PLUGINS=bundled,prometheus
     volumes:
       - ./kong:/usr/local/kong/declarative/
     ports:
@@ -58,6 +61,53 @@ services:
     networks:
       - quantum-net
     restart: unless-stopped
+
+  # ==================== JAEGER (Tracing) ====================
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: jaeger
+    ports:
+      - "16686:16686"  # UI
+      - "14268:14268"  # HTTP spans
+      - "4318:4318"    # OTLP HTTP
+    environment:
+      COLLECTOR_OTLP_ENABLED: true
+    networks:
+      - quantum-net
+    restart: unless-stopped
+
+  # ==================== PROMETHEUS (Metrics) ====================
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    networks:
+      - quantum-net
+    restart: unless-stopped
+
+  # ==================== GRAFANA (Dashboards) ====================
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      - prometheus
+      - jaeger
+    networks:
+      - quantum-net
+    restart: unless-stopped
+
+volumes:
+  prometheus-data:
 
 networks:
   quantum-net:

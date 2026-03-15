@@ -31,3 +31,5 @@ plugins:
     config:
       minute: 100
       policy: local
+  - name: prometheus
+
