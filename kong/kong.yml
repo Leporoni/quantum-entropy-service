@@ -35,6 +35,7 @@ services:
         paths:
           - /grafana
         strip_path: false
+        preserve_host: true
         regex_priority: 100
 
   - name: prometheus
