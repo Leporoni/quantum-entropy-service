@@ -45,6 +45,10 @@ services:
       - KONG_ADMIN_ACCESS_LOG=/dev/stdout
       - KONG_PROXY_ERROR_LOG=/dev/stderr
       - KONG_ADMIN_ERROR_LOG=/dev/stderr
+      - KONG_TRACING_INSTRUMENTATIONS=all
+      - KONG_TRACING_SAMPLING_RATE=1.0
+      - KONG_PLUGINS=bundled,prometheus
+      - KONG_ADMIN_LISTEN=0.0.0.0:8001, 0.0.0.0:8444 ssl
     volumes:
       - ./kong:/usr/local/kong/declarative/
     ports:
@@ -58,6 +62,66 @@ services:
     networks:
       - quantum-net
     restart: unless-stopped
+
+  # ==================== JAEGER (Tracing) ====================
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: jaeger
+    ports:
+      - "16686:16686"  # UI
+      - "14268:14268"  # HTTP spans
+      - "4318:4318"    # OTLP HTTP
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+      - QUERY_BASE_PATH=/jaeger
+    networks:
+      - quantum-net
+    restart: unless-stopped
+
+  # ==================== PROMETHEUS (Metrics) ====================
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.external-url=http://localhost:8000/prometheus/'
+    networks:
+      - quantum-net
+    restart: unless-stopped
+
+  # ==================== GRAFANA (Dashboards) ====================
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3001:3000"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SERVER_DOMAIN=localhost
+      - GF_SERVER_HTTP_PORT=3000
+      - GF_SERVER_PROTOCOL=http
+      - GF_SERVER_ROOT_URL=http://localhost:8000/grafana/
+      - GF_SERVER_SERVE_FROM_SUB_PATH=true
+      - GF_SECURITY_CSRF_TRUSTED_ORIGINS=http://localhost:8000
+      - GF_SECURITY_COOKIE_SAMESITE=lax
+    depends_on:
+      - prometheus
+      - jaeger
+    networks:
+      - quantum-net
+    restart: unless-stopped
+
+volumes:
+  prometheus-data:
 
 networks:
   quantum-net:

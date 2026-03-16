@@ -79,6 +79,30 @@ The Gateway is pre-configured with a **Rate Limiting** plugin:
 
 ---
 
+## 📊 Observability & Monitoring
+
+The project includes a complete observability stack to monitor performance, metrics, and distributed tracing across all microservices.
+
+### 🔍 Distributed Tracing (Jaeger)
+Track requests as they flow through the system (Kong -> KeyManager -> QuantumService).
+- **URL**: [http://localhost:16686](http://localhost:16686)
+- **Usage**: Select a service (e.g., `kong` or `quantum-random-service`) and click **Find Traces**.
+
+### 📈 Metrics (Prometheus)
+Real-time collection of system and application metrics (JVM, HTTP requests, Entropy generation).
+- **URL**: [http://localhost:9090](http://localhost:9090)
+- **Status**: Check **Status > Targets** to ensure all services are being scraped.
+
+### 🖼️ Dashboards (Grafana)
+Beautiful visualizations of the collected metrics.
+- **URL**: [http://localhost:3001](http://localhost:3001)
+- **Credentials**:
+  - **User**: `admin`
+  - **Password**: `admin`
+- **Setup**: The Prometheus datasource is pre-provisioned. You can start creating dashboards or import standard Spring Boot/JVM templates.
+
+---
+
 ## 🎨 Quantum Key Manager UI
 
 The web interface runs on port **3000** and provides a high-end dashboard to manage your quantum keys.
