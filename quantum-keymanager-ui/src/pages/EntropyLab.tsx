@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Zap, Shield, Microscope } from 'lucide-react';
+import { ArrowLeft, Zap, Shield, Microscope, Database } from 'lucide-react';
 import { entropyService } from '../services/api';
-import type { EntropyAuditReport, AuditMetrics } from '../services/api';
+import type { EntropyAuditReport, AuditMetrics, EntropyStatus } from '../services/api';
 import './EntropyLab.css';
 
 const INTENSITY_LEVELS = [
@@ -13,16 +13,29 @@ const INTENSITY_LEVELS = [
 
 const EntropyLab: React.FC = () => {
   const [report, setReport] = useState<EntropyAuditReport | null>(null);
+  const [status, setStatus] = useState<EntropyStatus | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [intensity, setIntensity] = useState(8192);
+
+  const fetchStatus = async () => {
+    try {
+      const data = await entropyService.getStatus();
+      setStatus(data);
+    } catch (err) {
+      console.error('Failed to fetch entropy status');
+    }
+  };
 
   const runAudit = async (customSize?: number) => {
     setLoading(true);
     setError(null);
     try {
-      const data = await entropyService.auditEntropy(customSize || intensity);
+      const targetSize = customSize || intensity;
+      const data = await entropyService.auditEntropy(targetSize);
       setReport(data);
+      // Refresh status after audit
+      fetchStatus();
     } catch (err: any) {
       setError(err.message || 'Failed to run entropy audit');
     } finally {
@@ -31,8 +44,15 @@ const EntropyLab: React.FC = () => {
   };
 
   useEffect(() => {
+    fetchStatus();
     runAudit();
+    
+    // Auto-refresh status to see reservoir filling
+    const interval = setInterval(fetchStatus, 5000);
+    return () => clearInterval(interval);
   }, []);
+
+  const getAvailableBytes = () => status?.availableBytes || 0;
 
   return (
     <div className="entropy-lab-container">
@@ -40,6 +60,19 @@ const EntropyLab: React.FC = () => {
         <Link to="/" className="back-link">
           <ArrowLeft size={18} /> Back to Dashboard
         </Link>
+        
+        {status && (
+          <div className="reservoir-status">
+            <Database size={14} /> 
+            <span>Reservoir: <strong>{(status.availableBytes / 1024).toFixed(1)} KB</strong> ({status.availableRecords} units)</span>
+            <div className="reservoir-bar">
+              <div 
+                className="reservoir-fill" 
+                style={{ width: `${Math.min(100, (status.availableBytes / 32768) * 100)}%` }}
+              ></div>
+            </div>
+          </div>
+        )}
       </nav>
 
       <header className="lab-header">
@@ -50,23 +83,27 @@ const EntropyLab: React.FC = () => {
         
         <div className="lab-controls">
           <div className="intensity-selector">
-            {INTENSITY_LEVELS.map((level) => (
-              <button
-                key={level.size}
-                className={`intensity-btn ${intensity === level.size ? 'active' : ''}`}
-                onClick={() => setIntensity(level.size)}
-                title={level.description}
-              >
-                {level.icon} {level.label}
-              </button>
-            ))}
+            {INTENSITY_LEVELS.map((level) => {
+              const isAvailable = getAvailableBytes() >= level.size;
+              return (
+                <button
+                  key={level.size}
+                  className={`intensity-btn ${intensity === level.size ? 'active' : ''} ${!isAvailable ? 'disabled' : ''}`}
+                  onClick={() => isAvailable && setIntensity(level.size)}
+                  title={isAvailable ? level.description : `Insufficient entropy (Need ${level.size / 1024} KB)`}
+                >
+                  {level.icon} {level.label}
+                  {!isAvailable && <span className="lock-icon">🔒</span>}
+                </button>
+              );
+            })}
           </div>
           <button 
             className="audit-button" 
             onClick={() => runAudit()} 
-            disabled={loading}
+            disabled={loading || getAvailableBytes() < intensity}
           >
-            {loading ? 'Analyzing...' : 'Run New Audit'}
+            {loading ? 'Analyzing...' : getAvailableBytes() < intensity ? 'Waiting for Entropy...' : 'Run New Audit'}
           </button>
         </div>
       </header>
@@ -74,9 +111,13 @@ const EntropyLab: React.FC = () => {
       {error && <div className="error-message">{error}</div>}
 
       <div className="audit-grid">
-        {report?.results.map((result, index) => (
-          <AuditCard key={index} result={result} />
-        ))}
+        {report?.results && report.results.length > 0 ? (
+          report.results.map((result, index) => (
+            <AuditCard key={index} result={result} />
+          ))
+        ) : (
+          !loading && <div className="no-data">Insufficient quantum data for selected intensity. Wait for refill.</div>
+        )}
       </div>
 
       <section className="audit-description">
@@ -127,7 +168,6 @@ const AuditCard: React.FC<{ result: AuditMetrics }> = ({ result }) => {
           bytes[i] = binaryString.charCodeAt(i);
         }
 
-        // We use a fixed 64x64 or larger view for the bitmap
         const viewSize = Math.floor(Math.sqrt(bytes.length));
         const canvasSize = Math.min(viewSize, 128); 
         
@@ -165,7 +205,7 @@ const AuditCard: React.FC<{ result: AuditMetrics }> = ({ result }) => {
         </div>
         <div className="metric-item">
           <span className="metric-label">Chi-Square (χ²)</span>
-          <span className={`metric-value ${Math.abs(result.chiSquare - 255) < 20 ? 'highlight' : 'warning'}`}>
+          <span className={`metric-value ${Math.abs(result.chiSquare - 255) < 30 ? 'highlight' : 'warning'}`}>
             {result.chiSquare.toFixed(2)}
           </span>
         </div>

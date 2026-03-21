@@ -40,15 +40,15 @@ public class EntropyCollectorScheduler {
         try {
             long count = quantumDataRepository.countByUsedFalse();
 
-            // Hysteresis logic: Refill if below 20, stop if above 50
-            if (count < 20) {
+            // Hysteresis logic: Refill if below 200, stop if above 1000
+            if (count < 200) {
                 log.info("Entropy low ({}). Starting rapid refill...", count);
 
                 int consecutiveFailures = 0;
                 final int maxConsecutiveFailures = 10;
 
-                // Fill up to 50
-                while (count < 50 && consecutiveFailures < maxConsecutiveFailures) {
+                // Fill up to 1000
+                while (count < 1000 && consecutiveFailures < maxConsecutiveFailures) {
                     if (fetchAndSave()) {
                         count++;
                         consecutiveFailures = 0; // Reset on success

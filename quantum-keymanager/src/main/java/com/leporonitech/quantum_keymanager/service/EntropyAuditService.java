@@ -12,7 +12,6 @@ import org.springframework.stereotype.Service;
 
 import java.security.SecureRandom;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -42,17 +41,24 @@ public class EntropyAuditService {
         private List<AuditMetrics> results;
     }
 
-    public EntropyAuditReport runFullAudit(int sampleSize) {
-        log.info("Starting entropy audit for sample size: {}", sampleSize);
+    public EntropyAuditReport runFullAudit(int requestedSize) {
+        log.info("Requested entropy audit for sample size: {}", requestedSize);
+        
+        byte[] quantumSample = getQuantumSample(requestedSize);
+        int realSampleSize = quantumSample.length;
+        
+        log.info("Actual sample size used for audit: {} bytes", realSampleSize);
         
         List<AuditMetrics> results = new ArrayList<>();
         
-        results.add(auditSource("Quantum (LFD)", getQuantumSample(sampleSize)));
-        results.add(auditSource("Java SecureRandom (CSPRNG)", getCsprngSample(sampleSize)));
-        results.add(auditSource("Java Random (LCRNG)", getPrngSample(sampleSize)));
+        if (realSampleSize > 0) {
+            results.add(auditSource("Quantum (LFD)", quantumSample));
+            results.add(auditSource("Java SecureRandom (CSPRNG)", getCsprngSample(realSampleSize)));
+            results.add(auditSource("Java Random (LCRNG)", getPrngSample(realSampleSize)));
+        }
         
         return EntropyAuditReport.builder()
-                .sampleSize(sampleSize)
+                .sampleSize(realSampleSize)
                 .results(results)
                 .build();
     }
@@ -83,17 +89,34 @@ public class EntropyAuditService {
 
     private byte[] getQuantumSample(int size) {
         // Just take the latest unused data without locking/consuming it
-        List<QuantumData> data = quantumDataRepository.findAll(PageRequest.of(0, (size / 32) + 1)).getContent();
+        // 32.768 bytes / 32 bytes/record = 1024 records. Using slightly more to be safe.
+        List<QuantumData> data = quantumDataRepository.findAll(PageRequest.of(0, (size / 32) + 100)).getContent();
         
-        byte[] sample = new byte[size];
+        // Calculate max available bytes
+        int maxAvailable = 0;
+        for (QuantumData q : data) {
+            maxAvailable += Base64.getDecoder().decode(q.getDataBase64()).length;
+        }
+        
+        int actualSize = Math.min(size, maxAvailable);
+        if (actualSize <= 0) return new byte[0];
+
+        byte[] sample = new byte[actualSize];
         int pos = 0;
         for (QuantumData q : data) {
             byte[] bytes = Base64.getDecoder().decode(q.getDataBase64());
-            int len = Math.min(bytes.length, size - pos);
+            int len = Math.min(bytes.length, actualSize - pos);
+            if (len <= 0) break;
             System.arraycopy(bytes, 0, sample, pos, len);
             pos += len;
-            if (pos >= size) break;
+            if (pos >= actualSize) break;
         }
+        
+        // Final sanity check: if we somehow have fewer bytes than calculated
+        if (pos < actualSize) {
+            return Arrays.copyOf(sample, pos);
+        }
+        
         return sample;
     }
 

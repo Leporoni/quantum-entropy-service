@@ -54,6 +54,7 @@ export const keyService = {
 
 export interface EntropyStatus {
   availableRecords: number;
+  availableBytes: number;
   costPerGeneration: number;
   costPerExport: number;
 }
