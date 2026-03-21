@@ -88,7 +88,7 @@ public class EntropyAuditService {
         byte[] sample = new byte[size];
         int pos = 0;
         for (QuantumData q : data) {
-            byte[] bytes = Base64.getDecoder().decode(q.getData());
+            byte[] bytes = Base64.getDecoder().decode(q.getDataBase64());
             int len = Math.min(bytes.length, size - pos);
             System.arraycopy(bytes, 0, sample, pos, len);
             pos += len;
