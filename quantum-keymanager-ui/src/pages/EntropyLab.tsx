@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { ArrowLeft, Zap, Shield, Microscope, Database } from 'lucide-react';
 import { entropyService } from '../services/api';
 import type { EntropyAuditReport, AuditMetrics, EntropyStatus } from '../services/api';
+import Footer from '../components/Footer';
 import './EntropyLab.css';
 
 const INTENSITY_LEVELS = [
@@ -78,7 +79,7 @@ const EntropyLab: React.FC = () => {
       <header className="lab-header">
         <div className="header-title">
           <h1>Entropy Laboratory</h1>
-          <p className="subtitle">Verifying Quantum Stochastic Superiority</p>
+          <p className="subtitle">Verifying Quantum Stochastic Superiority (256-byte Density)</p>
         </div>
         
         <div className="lab-controls">
@@ -125,7 +126,7 @@ const EntropyLab: React.FC = () => {
           <h3>📊 Statistical Indicators</h3>
           <p>
             <strong>Shannon Entropy:</strong> Measures information density. Ideal is 8.0 bits/byte. 
-            Quantum entropy remains constant even at high intensity, while PRNGs may show slight decay.
+            Each quantum record now carries 256 bytes (2048 bits) of high-density entropy.
           </p>
           <p>
             <strong>Chi-Square (χ²):</strong> The "Uniformity Test". For 256 byte buckets, a value near 255.0 is perfect. 
@@ -151,6 +152,8 @@ const EntropyLab: React.FC = () => {
           </p>
         </div>
       </section>
+
+      <Footer />
     </div>
   );
 };

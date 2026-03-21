@@ -73,8 +73,8 @@ public class EntropyCollectorScheduler {
 
     private boolean fetchAndSave() {
         try {
-            // Request 128 bytes (same as Go client)
-            String url = apiBaseUrl + "/api/v1/quantum-random?count=128";
+            // Request 256 bytes (2048 bits) for high-density quantum entropy
+            String url = apiBaseUrl + "/api/v1/quantum-random?count=256";
             String response = restTemplate.getForObject(url, String.class);
 
             JsonNode root = objectMapper.readTree(response);
