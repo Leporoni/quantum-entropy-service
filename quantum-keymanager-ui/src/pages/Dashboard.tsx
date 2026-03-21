@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Key } from 'lucide-react';
+import { Key, Microscope } from 'lucide-react';
 import Footer from '../components/Footer';
 import './Dashboard.css';
 
@@ -28,13 +28,28 @@ const Dashboard: React.FC = () => {
             Generation, management, and export of RSA key pairs (2048/4096 bits).
             Powered by our Quantum Entropy Engine (QRNG).
           </p>
-          <Link to="/keymanager" className="btn-primary">
-            Access Generator
-          </Link>
+          <div className="btn-group">
+            <Link to="/keymanager" className="btn-primary">
+              Access Generator
+            </Link>
+            <Link to="/vault" className="btn-secondary">
+              <span className="btn-main-text">VAULT ACCESS</span>
+              <span className="btn-sub-text">LIST | DELETE KEYS</span>
+            </Link>
+          </div>
+        </div>
 
-          <Link to="/vault" className="btn-secondary">
-            <span className="btn-main-text">VAULT ACCESS</span>
-            <span className="btn-sub-text">LIST | DELETE KEYS</span>
+        <div className="service-card">
+          <div className="card-icon">
+            <Microscope size={48} />
+          </div>
+          <h2>Entropy Laboratory</h2>
+          <p>
+            Verify the mathematical superiority of Quantum entropy against standard 
+            Pseudo-Random Number Generators (PRNGs).
+          </p>
+          <Link to="/entropy-lab" className="btn-primary">
+            Start Audit
           </Link>
         </div>
       </main>

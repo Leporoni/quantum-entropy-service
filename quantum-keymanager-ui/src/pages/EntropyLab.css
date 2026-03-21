@@ -1,0 +1,128 @@
+.entropy-lab-container {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.lab-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  border-bottom: 1px solid var(--neon-cyan);
+  padding-bottom: 1rem;
+}
+
+.lab-header h1 {
+  margin: 0;
+  color: var(--neon-cyan);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.audit-button {
+  background: transparent;
+  border: 1px solid var(--neon-cyan);
+  color: var(--neon-cyan);
+  padding: 0.8rem 1.5rem;
+  cursor: pointer;
+  font-weight: bold;
+  text-transform: uppercase;
+  transition: all 0.3s ease;
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.2);
+}
+
+.audit-button:hover {
+  background: var(--neon-cyan);
+  color: var(--bg-dark);
+  box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+}
+
+.audit-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.audit-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 2rem;
+}
+
+.audit-card {
+  background: rgba(30, 30, 30, 0.8);
+  border: 1px solid #444;
+  padding: 1.5rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.audit-card.quantum {
+  border-color: var(--neon-cyan);
+  box-shadow: inset 0 0 15px rgba(0, 255, 255, 0.1);
+}
+
+.audit-card h3 {
+  margin-top: 0;
+  color: #fff;
+  border-bottom: 1px solid #333;
+  padding-bottom: 0.5rem;
+}
+
+.bitmap-container {
+  display: flex;
+  justify-content: center;
+  margin: 1.5rem 0;
+  background: #000;
+  padding: 5px;
+  border: 1px solid #222;
+}
+
+canvas {
+  image-rendering: pixelated;
+  width: 256px;
+  height: 256px;
+}
+
+.metrics-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.metric-item {
+  display: flex;
+  justify-content: space-between;
+  font-family: 'Courier New', Courier, monospace;
+}
+
+.metric-label {
+  color: #888;
+}
+
+.metric-value {
+  color: #fff;
+  font-weight: bold;
+}
+
+.metric-value.highlight {
+  color: var(--neon-cyan);
+}
+
+.metric-value.warning {
+  color: #ffcc00;
+}
+
+.metric-value.danger {
+  color: #ff4444;
+}
+
+.audit-description {
+  margin-top: 2rem;
+  color: #aaa;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 1rem;
+  border-left: 3px solid var(--neon-cyan);
+}
