@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { entropyService, EntropyAuditReport, AuditMetrics } from '../services/api';
+import { entropyService } from '../services/api';
+import type { EntropyAuditReport, AuditMetrics } from '../services/api';
 import './EntropyLab.css';
 
 const EntropyLab: React.FC = () => {
