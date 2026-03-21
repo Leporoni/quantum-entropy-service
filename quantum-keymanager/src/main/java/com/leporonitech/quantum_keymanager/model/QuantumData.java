@@ -13,7 +13,7 @@ public class QuantumData {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "data_base64", nullable = false)
+    @Column(name = "data_base64", nullable = false, length = 2048)
     private String dataBase64;
 
     @Column(name = "created_at", insertable = false, updatable = false)
