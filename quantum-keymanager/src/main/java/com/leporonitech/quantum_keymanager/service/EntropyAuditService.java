@@ -7,6 +7,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
@@ -32,7 +33,7 @@ public class EntropyAuditService {
         private double compressionRatio;
         private int repetitions;
         private String base64Sample;
-        private String fingerprintHex; // Traceability fingerprint (first 16 bytes)
+        private String fingerprintHex;
     }
 
     @Data
@@ -43,7 +44,7 @@ public class EntropyAuditService {
     }
 
     public EntropyAuditReport runFullAudit(int requestedSize) {
-        log.info("Starting High-Resolution Entropy Audit. Requested: {} bytes.", requestedSize);
+        log.info("Starting Dynamic Entropy Audit. Requested: {} bytes.", requestedSize);
         
         byte[] quantumSample = getQuantumSample(requestedSize);
         int realSampleSize = quantumSample.length;
@@ -58,7 +59,6 @@ public class EntropyAuditService {
             results.add(auditSource("Java Random (LCRNG)", getPrngSample(realSampleSize)));
         }
         
-        log.info("Entropy Audit Completed successfully for {} sources.", results.size());
         return EntropyAuditReport.builder()
                 .sampleSize(realSampleSize)
                 .results(results)
@@ -78,9 +78,8 @@ public class EntropyAuditService {
         compression.validate(data);
         repetition.validate(data);
 
-        // Generate fingerprint for traceability (first 16 bytes)
         String fingerprint = bytesToHex(Arrays.copyOf(data, Math.min(data.length, 16)));
-        log.info("AUDIT TRACEABILITY - Source: [{}], Fingerprint (First 16 bytes): [{}]", name, fingerprint);
+        log.info("AUDIT TRACEABILITY - Source: [{}], Fingerprint: [{}]", name, fingerprint);
 
         return AuditMetrics.builder()
                 .source(name)
@@ -95,8 +94,23 @@ public class EntropyAuditService {
     }
 
     private byte[] getQuantumSample(int size) {
-        // Fetch unused data from repository
-        List<QuantumData> data = quantumDataRepository.findAll(PageRequest.of(0, (size / 32) + 100)).getContent();
+        long totalRecords = quantumDataRepository.countByUsedFalse();
+        if (totalRecords == 0) return new byte[0];
+
+        // Each record has 256 bytes. Calculate how many records we need.
+        int recordsNeeded = (size / 256) + 1;
+        
+        // Calculate a random start page/offset to make the audit dynamic
+        int maxStartOffset = (int) Math.max(0, totalRecords - recordsNeeded);
+        int randomStart = maxStartOffset > 0 ? secureRandom.nextInt(maxStartOffset) : 0;
+        
+        log.info("Dynamic Sampling: Selecting {} records starting from offset {} (Total in pool: {})", 
+                 recordsNeeded, randomStart, totalRecords);
+
+        // Fetch the records starting from random offset
+        // Spring Data PageRequest is 0-indexed. We fetch one "page" of recordsNeeded size.
+        Page<QuantumData> dataPage = quantumDataRepository.findAll(PageRequest.of(randomStart / recordsNeeded, recordsNeeded));
+        List<QuantumData> data = dataPage.getContent();
         
         int maxAvailable = 0;
         for (QuantumData q : data) {
@@ -115,10 +129,6 @@ public class EntropyAuditService {
             System.arraycopy(bytes, 0, sample, pos, len);
             pos += len;
             if (pos >= actualSize) break;
-        }
-        
-        if (pos < actualSize) {
-            return Arrays.copyOf(sample, pos);
         }
         
         return sample;
