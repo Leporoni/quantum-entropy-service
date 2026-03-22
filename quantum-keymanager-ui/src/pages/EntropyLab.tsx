@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Zap, Shield, Microscope, Database, Terminal, Fingerprint } from 'lucide-react';
+import { ArrowLeft, Zap, Shield, Microscope, Database, Fingerprint } from 'lucide-react';
 import { entropyService } from '../services/api';
 import type { EntropyAuditReport, AuditMetrics, EntropyStatus } from '../services/api';
 import Footer from '../components/Footer';
