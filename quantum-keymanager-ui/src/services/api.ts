@@ -54,13 +54,35 @@ export const keyService = {
 
 export interface EntropyStatus {
   availableRecords: number;
+  availableBytes: number;
   costPerGeneration: number;
   costPerExport: number;
+}
+
+export interface AuditMetrics {
+  source: string;
+  shannonEntropy: number;
+  chiSquare: number;
+  piEstimate: number;
+  compressionRatio: number;
+  repetitions: number;
+  base64Sample: string;
+  fingerprintHex: string;
+}
+
+export interface EntropyAuditReport {
+  sampleSize: number;
+  results: AuditMetrics[];
 }
 
 export const entropyService = {
   getStatus: async () => {
     const response = await api.get<EntropyStatus>('/quantum-entropy/status');
+    return response.data;
+  },
+
+  auditEntropy: async (size: number = 2048) => {
+    const response = await api.get<EntropyAuditReport>(`/quantum-entropy/audit?size=${size}`);
     return response.data;
   }
 };
