@@ -32,6 +32,7 @@ public class EntropyAuditService {
         private double compressionRatio;
         private int repetitions;
         private String base64Sample;
+        private String fingerprintHex; // Traceability fingerprint (first 16 bytes)
     }
 
     @Data
@@ -42,7 +43,7 @@ public class EntropyAuditService {
     }
 
     public EntropyAuditReport runFullAudit(int requestedSize) {
-        log.info("Requested entropy audit for sample size: {}", requestedSize);
+        log.info("Starting High-Resolution Entropy Audit. Requested: {} bytes.", requestedSize);
         
         byte[] quantumSample = getQuantumSample(requestedSize);
         int realSampleSize = quantumSample.length;
@@ -57,6 +58,7 @@ public class EntropyAuditService {
             results.add(auditSource("Java Random (LCRNG)", getPrngSample(realSampleSize)));
         }
         
+        log.info("Entropy Audit Completed successfully for {} sources.", results.size());
         return EntropyAuditReport.builder()
                 .sampleSize(realSampleSize)
                 .results(results)
@@ -76,6 +78,10 @@ public class EntropyAuditService {
         compression.validate(data);
         repetition.validate(data);
 
+        // Generate fingerprint for traceability (first 16 bytes)
+        String fingerprint = bytesToHex(Arrays.copyOf(data, Math.min(data.length, 16)));
+        log.info("AUDIT TRACEABILITY - Source: [{}], Fingerprint (First 16 bytes): [{}]", name, fingerprint);
+
         return AuditMetrics.builder()
                 .source(name)
                 .shannonEntropy(shannon.getCalculatedEntropy())
@@ -84,15 +90,14 @@ public class EntropyAuditService {
                 .compressionRatio(compression.getCompressionRatio())
                 .repetitions(repetition.getRepetitionCount())
                 .base64Sample(Base64.getEncoder().encodeToString(data))
+                .fingerprintHex(fingerprint)
                 .build();
     }
 
     private byte[] getQuantumSample(int size) {
-        // Just take the latest unused data without locking/consuming it
-        // 32.768 bytes / 32 bytes/record = 1024 records. Using slightly more to be safe.
+        // Fetch unused data from repository
         List<QuantumData> data = quantumDataRepository.findAll(PageRequest.of(0, (size / 32) + 100)).getContent();
         
-        // Calculate max available bytes
         int maxAvailable = 0;
         for (QuantumData q : data) {
             maxAvailable += Base64.getDecoder().decode(q.getDataBase64()).length;
@@ -112,7 +117,6 @@ public class EntropyAuditService {
             if (pos >= actualSize) break;
         }
         
-        // Final sanity check: if we somehow have fewer bytes than calculated
         if (pos < actualSize) {
             return Arrays.copyOf(sample, pos);
         }
@@ -130,5 +134,13 @@ public class EntropyAuditService {
         byte[] sample = new byte[size];
         prng.nextBytes(sample);
         return sample;
+    }
+
+    private String bytesToHex(byte[] bytes) {
+        StringBuilder sb = new StringBuilder();
+        for (byte b : bytes) {
+            sb.append(String.format("%02x", b));
+        }
+        return sb.toString();
     }
 }

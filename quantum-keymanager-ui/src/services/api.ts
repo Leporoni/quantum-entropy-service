@@ -67,6 +67,7 @@ export interface AuditMetrics {
   compressionRatio: number;
   repetitions: number;
   base64Sample: string;
+  fingerprintHex: string;
 }
 
 export interface EntropyAuditReport {

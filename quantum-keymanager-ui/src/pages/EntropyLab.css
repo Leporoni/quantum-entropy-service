@@ -183,21 +183,91 @@
   transform: translateY(-5px);
 }
 
-.audit-card.quantum {
-  border-color: var(--neon-cyan);
-  background: linear-gradient(145deg, rgba(15, 15, 15, 0.9), rgba(0, 255, 255, 0.05));
+.card-header-main {
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding-bottom: 0.8rem;
 }
 
-.card-tag {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
+.trace-fingerprint {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: 'Fira Code', monospace;
+  font-size: 0.65rem;
+  color: #555;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 4px 8px;
+  border-radius: 4px;
+  margin-top: 0.5rem;
+}
+
+.quantum .trace-fingerprint {
+  color: var(--neon-cyan);
+  border: 1px solid rgba(0, 255, 255, 0.1);
+}
+
+.visual-assets {
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+  align-items: start;
+}
+
+.asset-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.asset-label {
   font-size: 0.6rem;
   text-transform: uppercase;
-  background: #333;
-  padding: 2px 8px;
+  color: #444;
+  letter-spacing: 1px;
+}
+
+.bitmap-container {
+  margin-bottom: 0;
+  padding: 4px;
+}
+
+.hex-matrix {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 4px;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 8px;
   border-radius: 4px;
-  color: #aaa;
+  border: 1px solid #222;
+}
+
+.hex-byte {
+  font-family: 'Fira Code', monospace;
+  font-size: 0.7rem;
+  color: #888;
+  text-align: center;
+}
+
+.quantum .hex-byte {
+  color: #ccc;
+}
+
+.metric-data {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.metric-sub {
+  font-size: 0.65rem;
+  color: #555;
+  margin-top: 2px;
+}
+
+.highlight + .metric-sub {
+  color: rgba(0, 255, 255, 0.5);
 }
 
 .quantum .card-tag {
