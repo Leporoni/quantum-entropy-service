@@ -28,7 +28,9 @@ services:
       - key: SPRING_PROFILES_ACTIVE
         value: memory
       - key: API_BASE_URL
-        value: https://quantum-generator-api.onrender.com
+        value: http://quantum-generator-api:10000
+      - key: WORKER_URL
+        value: http://quantum-generator-api:10000
       - key: MASTER_KEY_SECRET
         generateValue: true
 
@@ -42,3 +44,5 @@ services:
     envVars:
       - key: VITE_API_URL
         value: https://quantum-keymanager-api.onrender.com/api/v1
+      - key: VITE_WORKER_URL
+        value: https://quantum-generator-api.onrender.com
