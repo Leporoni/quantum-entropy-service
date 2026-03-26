@@ -56,8 +56,8 @@ class EntropyCollectorSchedulerTest {
 
     @Test
     void shouldNotCollectWhenEntropyIsSufficient() {
-        // Arrange - entropy count is above threshold (20)
-        when(quantumDataRepository.countByUsedFalse()).thenReturn(30L);
+        // Arrange - entropy count is above threshold (1000)
+        when(quantumDataRepository.countByUsedFalse()).thenReturn(1200L);
 
         // Act
         scheduler.collectEntropy();
@@ -69,12 +69,11 @@ class EntropyCollectorSchedulerTest {
 
     @Test
     void shouldCollectWhenEntropyIsLow() {
-        // Arrange - entropy count is below threshold (20)
+        // Arrange - entropy count is below threshold (200)
         when(quantumDataRepository.countByUsedFalse())
-                .thenReturn(10L)  // First check - low
-                .thenReturn(25L)  // After first fetch
-                .thenReturn(40L)  // After second fetch
-                .thenReturn(55L); // Above 50, stop
+                .thenReturn(100L)  // First check - low
+                .thenReturn(500L)  // After first fetch
+                .thenReturn(1001L); // Above 1000, stop
 
         // Mock API response with valid random data
         String validBase64Data = generateValidRandomBase64(128);
@@ -91,8 +90,8 @@ class EntropyCollectorSchedulerTest {
 
     @Test
     void shouldValidateEntropyBeforeSaving() {
-        // Arrange - start at 19 (below threshold 20)
-        when(quantumDataRepository.countByUsedFalse()).thenReturn(19L);
+        // Arrange - start below threshold 200
+        when(quantumDataRepository.countByUsedFalse()).thenReturn(190L).thenReturn(1001L);
 
         // Valid random data
         String validBase64Data = generateValidRandomBase64(128);
@@ -103,7 +102,7 @@ class EntropyCollectorSchedulerTest {
         // Act
         scheduler.collectEntropy();
 
-        // Assert - data should be saved (count goes from 19 to 50 = 31 saves)
+        // Assert - data should be saved
         verify(quantumDataRepository, atLeastOnce()).save(argThat(data -> 
             data.getDataBase64() != null && !data.getDataBase64().isEmpty()
         ));
@@ -112,7 +111,7 @@ class EntropyCollectorSchedulerTest {
     @Test
     void shouldRejectLowEntropyData() {
         // Arrange
-        when(quantumDataRepository.countByUsedFalse()).thenReturn(10L).thenReturn(55L);
+        when(quantumDataRepository.countByUsedFalse()).thenReturn(100L).thenReturn(1001L);
 
         // Low entropy data (all same bytes - will fail Shannon entropy test)
         byte[] lowEntropyBytes = new byte[128];
@@ -131,7 +130,7 @@ class EntropyCollectorSchedulerTest {
     @Test
     void shouldRejectCompressibleData() {
         // Arrange
-        when(quantumDataRepository.countByUsedFalse()).thenReturn(10L).thenReturn(55L);
+        when(quantumDataRepository.countByUsedFalse()).thenReturn(100L).thenReturn(1001L);
 
         // Highly compressible data (repeating pattern)
         byte[] compressibleBytes = new byte[128];
@@ -152,7 +151,7 @@ class EntropyCollectorSchedulerTest {
     @Test
     void shouldRejectDataWithExcessiveRepetition() {
         // Arrange
-        when(quantumDataRepository.countByUsedFalse()).thenReturn(10L).thenReturn(55L);
+        when(quantumDataRepository.countByUsedFalse()).thenReturn(100L).thenReturn(1001L);
 
         // Data with excessive repetition (> 20% consecutive same bytes)
         byte[] repetitiveBytes = new byte[128];
@@ -183,7 +182,7 @@ class EntropyCollectorSchedulerTest {
     @Test
     void shouldHandleApiError() {
         // Arrange
-        when(quantumDataRepository.countByUsedFalse()).thenReturn(10L).thenReturn(55L);
+        when(quantumDataRepository.countByUsedFalse()).thenReturn(100L).thenReturn(1001L);
         when(restTemplate.getForObject(anyString(), eq(String.class)))
                 .thenThrow(new RuntimeException("API Error"));
 
@@ -197,7 +196,7 @@ class EntropyCollectorSchedulerTest {
     @Test
     void shouldHandleInvalidJsonResponse() {
         // Arrange
-        when(quantumDataRepository.countByUsedFalse()).thenReturn(10L).thenReturn(55L);
+        when(quantumDataRepository.countByUsedFalse()).thenReturn(100L).thenReturn(1001L);
         when(restTemplate.getForObject(anyString(), eq(String.class)))
                 .thenReturn("invalid json");
 
@@ -211,7 +210,7 @@ class EntropyCollectorSchedulerTest {
     @Test
     void shouldHandleEmptyDataField() {
         // Arrange
-        when(quantumDataRepository.countByUsedFalse()).thenReturn(10L).thenReturn(55L);
+        when(quantumDataRepository.countByUsedFalse()).thenReturn(100L).thenReturn(1001L);
         when(restTemplate.getForObject(anyString(), eq(String.class)))
                 .thenReturn("{\"data\":\"\"}");
 
@@ -225,7 +224,7 @@ class EntropyCollectorSchedulerTest {
     @Test
     void shouldHandleMissingDataField() {
         // Arrange
-        when(quantumDataRepository.countByUsedFalse()).thenReturn(10L).thenReturn(55L);
+        when(quantumDataRepository.countByUsedFalse()).thenReturn(100L).thenReturn(1001L);
         when(restTemplate.getForObject(anyString(), eq(String.class)))
                 .thenReturn("{\"otherField\":\"value\"}");
 
@@ -239,7 +238,7 @@ class EntropyCollectorSchedulerTest {
     @Test
     void shouldRejectDataShorterThan32Bytes() {
         // Arrange
-        when(quantumDataRepository.countByUsedFalse()).thenReturn(10L).thenReturn(55L);
+        when(quantumDataRepository.countByUsedFalse()).thenReturn(100L).thenReturn(1001L);
 
         // Only 16 bytes - below minimum
         String shortBase64 = Base64.getEncoder().encodeToString(new byte[16]);

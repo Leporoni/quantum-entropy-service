@@ -75,6 +75,7 @@ public class EntropyCollectorScheduler {
         try {
             // Request 256 bytes (2048 bits) of PURE quantum entropy for audit-ready storage
             String url = apiBaseUrl + "/api/v1/quantum-random?count=256&pure=true";
+            log.debug("Fetching entropy from: {}", url);
             String response = restTemplate.getForObject(url, String.class);
 
             JsonNode root = objectMapper.readTree(response);
