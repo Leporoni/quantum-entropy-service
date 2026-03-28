@@ -24,19 +24,13 @@ const EntropyMeter: React.FC = () => {
   useEffect(() => {
     fetchStatus();
 
-    // Wake up worker if URL is configured
-    if (import.meta.env.VITE_WORKER_URL) {
-      fetch(`${import.meta.env.VITE_WORKER_URL}/health`, { mode: 'no-cors' })
-        .catch(() => console.log('Worker wake-up ping sent'));
-    }
-
     const interval = setInterval(fetchStatus, 5000);
     return () => clearInterval(interval);
   }, []);
 
   if (loading && !status) return <div className="entropy-loader">Initializing sensors...</div>;
 
-  const percentage = status ? Math.min((status.availableRecords / 50) * 100, 100) : 0;
+  const percentage = status ? Math.min((status.availableRecords / 1000) * 100, 100) : 0;
 
   let color = 'var(--accent-cyan)';
   let label = 'OPTIMAL';
