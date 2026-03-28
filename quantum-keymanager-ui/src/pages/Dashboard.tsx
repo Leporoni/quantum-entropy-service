@@ -2,15 +2,22 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Key, Microscope } from 'lucide-react';
 import Footer from '../components/Footer';
+import CloudStatus from '../components/CloudStatus';
+import { cloudSyncService } from '../services/cloudSync';
 import './Dashboard.css';
 
 const Dashboard: React.FC = () => {
+  React.useEffect(() => {
+    cloudSyncService.startSync();
+  }, []);
+
   return (
     <div className="dashboard-container">
       <div className="bg-grid"></div>
 
       <header className="dashboard-header">
         <div className="brand">CRYPTO <span>QUANTUM</span> SERVICE</div>
+        <CloudStatus />
       </header>
 
       <section className="hero">
@@ -45,7 +52,7 @@ const Dashboard: React.FC = () => {
           </div>
           <h2>Entropy Laboratory</h2>
           <p>
-            Verify the mathematical superiority of Quantum entropy against standard 
+            Verify the mathematical superiority of Quantum entropy against standard
             Pseudo-Random Number Generators (PRNGs).
           </p>
           <Link to="/entropy-lab" className="btn-primary">

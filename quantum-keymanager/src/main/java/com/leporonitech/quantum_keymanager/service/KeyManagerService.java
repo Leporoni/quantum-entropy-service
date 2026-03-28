@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.client.RestTemplate;
+import jakarta.annotation.PostConstruct;
 
 @Service
 @RequiredArgsConstructor
@@ -28,6 +29,14 @@ public class KeyManagerService {
     private String workerUrl;
 
     private final RestTemplate restTemplate = new RestTemplate();
+
+    @PostConstruct
+    public void init() {
+        // Jump-start the generator wake-up as soon as Keymanager starts
+        if (workerUrl != null && !workerUrl.isEmpty()) {
+            wakeWorker();
+        }
+    }
 
     @Transactional
     public RsaKey createRsaKey(String alias, int keySize) throws Exception {
