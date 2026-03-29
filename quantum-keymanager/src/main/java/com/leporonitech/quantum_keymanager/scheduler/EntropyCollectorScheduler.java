@@ -95,6 +95,7 @@ public class EntropyCollectorScheduler {
                 QuantumData quantumData = new QuantumData();
                 quantumData.setDataBase64(dataBase64);
                 quantumData.setUsed(false);
+                quantumData.setSource("LFD");
                 QuantumData savedData = quantumDataRepository.save(quantumData);
                 log.info("Entropy saved to database successfully. ID: {}, Size: {} bytes", 
                     savedData.getId(), 

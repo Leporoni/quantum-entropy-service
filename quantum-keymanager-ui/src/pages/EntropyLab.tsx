@@ -130,6 +130,11 @@ const EntropyLab: React.FC = () => {
             mathematical bias. Quantum sources typically show balanced, non-algorithmic offsets.
           </p>
           <p>
+            <strong>Compression (GZIP):</strong> Proves algorithmic simplicity. High-quality entropy 
+            cannot be compressed (100% or more). A result below 95% indicates repetitive patterns 
+            or low complexity.
+          </p>
+          <p>
             <strong>Monte Carlo π:</strong> Approaching 3.14159 proving spatial equidistribution. 
           </p>
         </div>

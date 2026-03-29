@@ -44,17 +44,32 @@ public class EntropyAuditService {
     }
 
     public EntropyAuditReport runFullAudit(int requestedSize) {
-        log.info("Starting Dynamic Entropy Audit. Requested: {} bytes.", requestedSize);
-        
-        byte[] quantumSample = getQuantumSample(requestedSize);
-        int realSampleSize = quantumSample.length;
-        
-        log.info("Actual sample size used for audit: {} bytes", realSampleSize);
+        log.info("Starting Dynamic Multi-Source Audit. Requested: {} bytes.", requestedSize);
         
         List<AuditMetrics> results = new ArrayList<>();
-        
+        int realSampleSize = 0;
+
+        // 1. Audit LFD Quantum Source
+        byte[] lfdSample = getQuantumSample("LFD", requestedSize);
+        if (lfdSample.length > 0) {
+            realSampleSize = lfdSample.length;
+            results.add(auditSource("Quantum (LFD)", lfdSample));
+        }
+
+        // 2. Audit ANU Quantum Source
+        byte[] anuSample = getQuantumSample("ANU", requestedSize);
+        if (anuSample.length > 0) {
+            // Use LFD size if available to keep comparison fair
+            int sizeToAudit = realSampleSize > 0 ? realSampleSize : anuSample.length;
+            if (anuSample.length > sizeToAudit) {
+                anuSample = Arrays.copyOf(anuSample, sizeToAudit);
+            }
+            results.add(auditSource("Quantum (ANU)", anuSample));
+            if (realSampleSize == 0) realSampleSize = anuSample.length;
+        }
+
+        // 3. Audit Local PRNGs
         if (realSampleSize > 0) {
-            results.add(auditSource("Quantum (LFD)", quantumSample));
             results.add(auditSource("Java SecureRandom (CSPRNG)", getCsprngSample(realSampleSize)));
             results.add(auditSource("Java Random (LCRNG)", getPrngSample(realSampleSize)));
         }
@@ -93,8 +108,8 @@ public class EntropyAuditService {
                 .build();
     }
 
-    private byte[] getQuantumSample(int size) {
-        long totalRecords = quantumDataRepository.countByUsedFalse();
+    private byte[] getQuantumSample(String source, int size) {
+        long totalRecords = quantumDataRepository.countByUsedFalseAndSource(source);
         if (totalRecords == 0) return new byte[0];
 
         // Each record has 256 bytes. Calculate how many records we need.
@@ -104,12 +119,14 @@ public class EntropyAuditService {
         int maxStartOffset = (int) Math.max(0, totalRecords - recordsNeeded);
         int randomStart = maxStartOffset > 0 ? secureRandom.nextInt(maxStartOffset) : 0;
         
-        log.info("Dynamic Sampling: Selecting {} records starting from offset {} (Total in pool: {})", 
-                 recordsNeeded, randomStart, totalRecords);
+        log.info("Dynamic Sampling [{}]: Selecting {} records starting from offset {} (Total in pool: {})", 
+                 source, recordsNeeded, randomStart, totalRecords);
 
         // Fetch the records starting from random offset
-        // Spring Data PageRequest is 0-indexed. We fetch one "page" of recordsNeeded size.
-        Page<QuantumData> dataPage = quantumDataRepository.findAll(PageRequest.of(randomStart / recordsNeeded, recordsNeeded));
+        Page<QuantumData> dataPage = quantumDataRepository.findByUsedFalseAndSource(
+                source, 
+                PageRequest.of(randomStart / recordsNeeded, recordsNeeded)
+        );
         List<QuantumData> data = dataPage.getContent();
         
         int maxAvailable = 0;

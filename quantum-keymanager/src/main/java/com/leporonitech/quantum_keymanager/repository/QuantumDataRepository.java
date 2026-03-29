@@ -17,8 +17,12 @@ public interface QuantumDataRepository extends JpaRepository<QuantumData, Long> 
     List<QuantumData> findUnusedDataWithLock();
     
     // Correção: Lock mode via SQL nativo (FOR UPDATE) em vez de anotação @Lock
-    @Query(value = "SELECT * FROM quantum_data WHERE used = false ORDER BY id ASC LIMIT :limit FOR UPDATE", nativeQuery = true)
-    List<QuantumData> findUnusedDataWithLock(int limit);
+    @Query(value = "SELECT * FROM quantum_data WHERE used = false AND source = :source ORDER BY id ASC LIMIT :limit FOR UPDATE", nativeQuery = true)
+    List<QuantumData> findUnusedDataWithLock(String source, int limit);
+
+    org.springframework.data.domain.Page<com.leporonitech.quantum_keymanager.model.QuantumData> findByUsedFalseAndSource(String source, org.springframework.data.domain.Pageable pageable);
 
     long countByUsedFalse();
+
+    long countByUsedFalseAndSource(String source);
 }
