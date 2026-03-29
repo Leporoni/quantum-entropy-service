@@ -64,7 +64,7 @@ class KeyManagerServiceTest {
     void shouldCreateRsaKeyWithMixedEntropy() throws Exception {
         // Arrange
         List<QuantumData> entropyBatch = createMockEntropyBatch(5);
-        when(quantumDataRepository.findUnusedDataWithLock(5)).thenReturn(entropyBatch);
+        when(quantumDataRepository.findUnusedDataWithLock("LFD", 5)).thenReturn(entropyBatch);
         when(quantumDataRepository.saveAll(anyList())).thenReturn(entropyBatch);
         when(encryptionService.encrypt(anyString())).thenReturn("encrypted-private-key");
         
@@ -85,7 +85,7 @@ class KeyManagerServiceTest {
         assertEquals(2048, result.getKeySize());
         
         // Verify entropy was consumed
-        verify(quantumDataRepository).findUnusedDataWithLock(5);
+        verify(quantumDataRepository).findUnusedDataWithLock("LFD", 5);
         verify(quantumDataRepository).saveAll(anyList());
         verify(rsaKeyRepository).save(any(RsaKey.class));
         
@@ -96,8 +96,8 @@ class KeyManagerServiceTest {
     @Test
     void shouldThrowInsufficientEntropyExceptionWhenNoEntropyAvailable() {
         // Arrange
-        when(quantumDataRepository.findUnusedDataWithLock(5)).thenReturn(List.of());
-        when(quantumDataRepository.countByUsedFalse()).thenReturn(0L);
+        when(quantumDataRepository.findUnusedDataWithLock("LFD", 5)).thenReturn(List.of());
+        when(quantumDataRepository.countByUsedFalseAndSource("LFD")).thenReturn(0L);
 
         // Act & Assert
         InsufficientEntropyException exception = assertThrows(
@@ -115,8 +115,8 @@ class KeyManagerServiceTest {
     @Test
     void shouldThrowInsufficientEntropyExceptionWhenNotEnoughEntropy() {
         // Arrange
-        when(quantumDataRepository.findUnusedDataWithLock(5)).thenReturn(List.of());
-        when(quantumDataRepository.countByUsedFalse()).thenReturn(3L);
+        when(quantumDataRepository.findUnusedDataWithLock("LFD", 5)).thenReturn(List.of());
+        when(quantumDataRepository.countByUsedFalseAndSource("LFD")).thenReturn(3L);
 
         // Act & Assert
         InsufficientEntropyException exception = assertThrows(
@@ -218,13 +218,15 @@ class KeyManagerServiceTest {
     @Test
     void shouldGetEntropyStatus() {
         // Arrange
-        when(quantumDataRepository.countByUsedFalse()).thenReturn(100L);
+        List<QuantumData> mockData = createMockEntropyBatch(10);
+        mockData.forEach(d -> d.setSource("LFD"));
+        when(quantumDataRepository.findAll()).thenReturn(mockData);
 
         // Act
         KeyManagerService.EntropyStatus status = keyManagerService.getEntropyStatus();
 
         // Assert
-        assertEquals(100L, status.getAvailableRecords());
+        assertEquals(10L, status.getAvailableRecords());
         assertEquals(5, status.getCostPerGeneration());
         assertEquals(2, status.getCostPerExport());
     }
@@ -232,25 +234,29 @@ class KeyManagerServiceTest {
     @Test
     void shouldWakeWorkerWhenEntropyIsLow() {
         // Arrange
-        when(quantumDataRepository.countByUsedFalse()).thenReturn(30L); // Below 50
+        List<QuantumData> mockData = createMockEntropyBatch(10); // Below 200
+        mockData.forEach(d -> d.setSource("LFD"));
+        when(quantumDataRepository.findAll()).thenReturn(mockData);
 
         // Act
         keyManagerService.getEntropyStatus();
 
-        // Assert - Worker wake is async, we just verify the count was checked
-        verify(quantumDataRepository).countByUsedFalse();
+        // Assert - Worker wake is async, we verify the records were checked
+        verify(quantumDataRepository).findAll();
     }
 
     @Test
     void shouldNotWakeWorkerWhenEntropyIsSufficient() {
         // Arrange
-        when(quantumDataRepository.countByUsedFalse()).thenReturn(100L); // Above 50
+        List<QuantumData> mockData = createMockEntropyBatch(250); // Above 200
+        mockData.forEach(d -> d.setSource("LFD"));
+        when(quantumDataRepository.findAll()).thenReturn(mockData);
 
         // Act
         keyManagerService.getEntropyStatus();
 
         // Assert
-        verify(quantumDataRepository).countByUsedFalse();
+        verify(quantumDataRepository).findAll();
     }
 
     @Test
@@ -265,7 +271,7 @@ class KeyManagerServiceTest {
         when(encryptionService.decrypt("encrypted-key")).thenReturn("decrypted-private-key-base64");
         
         List<QuantumData> transportEntropy = createMockEntropyBatch(2);
-        when(quantumDataRepository.findUnusedDataWithLock(2)).thenReturn(transportEntropy);
+        when(quantumDataRepository.findUnusedDataWithLock("LFD", 2)).thenReturn(transportEntropy);
         when(quantumDataRepository.saveAll(anyList())).thenReturn(transportEntropy);
 
         // Act
@@ -276,9 +282,9 @@ class KeyManagerServiceTest {
         assertNotNull(response.getEncryptedPrivateKey());
         assertNotNull(response.getTransportKey());
         assertEquals("AES-256", response.getAlgorithm());
-        
+
         // Verify entropy was consumed
-        verify(quantumDataRepository).findUnusedDataWithLock(2);
+        verify(quantumDataRepository).findUnusedDataWithLock("LFD", 2);
     }
 
     @Test
@@ -289,8 +295,8 @@ class KeyManagerServiceTest {
         mockKey.setPrivateKeyEncrypted("encrypted-key");
         when(rsaKeyRepository.findById(1L)).thenReturn(Optional.of(mockKey));
         lenient().when(encryptionService.decrypt("encrypted-key")).thenReturn("decrypted-key");
-        when(quantumDataRepository.findUnusedDataWithLock(2)).thenReturn(List.of());
-        when(quantumDataRepository.countByUsedFalse()).thenReturn(0L);
+        when(quantumDataRepository.findUnusedDataWithLock("LFD", 2)).thenReturn(List.of());
+        when(quantumDataRepository.countByUsedFalseAndSource("LFD")).thenReturn(0L);
 
         // Act & Assert
         InsufficientEntropyException exception = assertThrows(
@@ -298,14 +304,14 @@ class KeyManagerServiceTest {
                 () -> keyManagerService.exportPrivateKey(1L)
         );
 
-        assertTrue(exception.getMessage().contains("Insufficient quantum entropy for key export"));
+        assertTrue(exception.getMessage().contains("Insufficient LFD quantum entropy for key export"));
     }
 
     @Test
     void shouldCreateRsaKeyWithDifferentKeySizes() throws Exception {
         // Arrange - Test with 4096-bit key
         List<QuantumData> entropyBatch = createMockEntropyBatch(5);
-        when(quantumDataRepository.findUnusedDataWithLock(5)).thenReturn(entropyBatch);
+        when(quantumDataRepository.findUnusedDataWithLock("LFD", 5)).thenReturn(entropyBatch);
         when(quantumDataRepository.saveAll(anyList())).thenReturn(entropyBatch);
         when(encryptionService.encrypt(anyString())).thenReturn("encrypted-private-key");
         
@@ -326,7 +332,7 @@ class KeyManagerServiceTest {
     void shouldMarkEntropyAsUsedAfterKeyGeneration() throws Exception {
         // Arrange
         List<QuantumData> entropyBatch = createMockEntropyBatch(5);
-        when(quantumDataRepository.findUnusedDataWithLock(5)).thenReturn(entropyBatch);
+        when(quantumDataRepository.findUnusedDataWithLock("LFD", 5)).thenReturn(entropyBatch);
         when(quantumDataRepository.saveAll(anyList())).thenReturn(entropyBatch);
         when(encryptionService.encrypt(anyString())).thenReturn("encrypted");
         

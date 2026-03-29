@@ -19,10 +19,11 @@ public class QuantumController {
 
     @GetMapping("/quantum-random")
     public ResponseEntity<Map<String, String>> getQuantumData(
+            @RequestParam(defaultValue = "LFD") String source,
             @RequestParam(defaultValue = "128") int count,
             @RequestParam(defaultValue = "false") boolean pure) {
 
-        String base64Data = quantumService.getQuantumNumbersAsBase64(count, pure);
+        String base64Data = quantumService.getQuantumNumbersAsBase64(source, count, pure);
         Map<String, String> response = Map.of("data", base64Data);
         return ResponseEntity.ok(response);
     }

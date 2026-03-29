@@ -40,12 +40,12 @@ public class KeyManagerService {
 
     @Transactional
     public RsaKey createRsaKey(String alias, int keySize) throws Exception {
-        List<QuantumData> entropyBatch = quantumDataRepository.findUnusedDataWithLock(5);
+        List<QuantumData> entropyBatch = quantumDataRepository.findUnusedDataWithLock("LFD", 5);
         if (entropyBatch.isEmpty()) {
-            long available = quantumDataRepository.countByUsedFalse();
+            long available = quantumDataRepository.countByUsedFalseAndSource("LFD");
             throw new InsufficientEntropyException(
                     String.format(
-                            "Insufficient quantum entropy. The system requires at least 5 units to generate a key. Current available: %d.",
+                            "Insufficient LFD quantum entropy. The system requires at least 5 units to generate a key. Current available: %d.",
                             available));
         }
 
@@ -119,12 +119,12 @@ public class KeyManagerService {
         RsaKey rsaKey = getKeyById(id);
         String privateKeyBase64 = encryptionService.decrypt(rsaKey.getPrivateKeyEncrypted());
 
-        List<QuantumData> transportEntropy = quantumDataRepository.findUnusedDataWithLock(2);
+        List<QuantumData> transportEntropy = quantumDataRepository.findUnusedDataWithLock("LFD", 2);
         if (transportEntropy.isEmpty()) {
-            long available = quantumDataRepository.countByUsedFalse();
+            long available = quantumDataRepository.countByUsedFalseAndSource("LFD");
             throw new InsufficientEntropyException(
                     String.format(
-                            "Insufficient quantum entropy for key export. Current available: %d.",
+                            "Insufficient LFD quantum entropy for key export. Current available: %d.",
                             available));
         }
 
@@ -152,9 +152,9 @@ public class KeyManagerService {
     }
 
     public EntropyStatus getEntropyStatus() {
-        // Encontra todos os registros não usados para calcular os bytes reais
+        // Encontra todos os registros não usados de LFD para calcular os bytes reais
         List<QuantumData> availableData = quantumDataRepository.findAll().stream()
-                .filter(q -> !q.isUsed())
+                .filter(q -> !q.isUsed() && "LFD".equals(q.getSource()))
                 .toList();
 
         long availableRecords = availableData.size();

@@ -37,7 +37,7 @@ class QuantumServiceTest {
         when(lfdQuantumApiClient.getRandomNumbers(5, "HEX")).thenReturn(mockResponse);
 
         // Act
-        String result = quantumService.getQuantumNumbersAsBase64(5, false);
+        String result = quantumService.getQuantumNumbersAsBase64("LFD", 5, false);
 
         // Assert
         assertNotNull(result);
@@ -61,7 +61,7 @@ class QuantumServiceTest {
         when(lfdQuantumApiClient.getRandomNumbers(5, "HEX")).thenReturn(mockResponse);
 
         // Act
-        String result = quantumService.getQuantumNumbersAsBase64(5, true);
+        String result = quantumService.getQuantumNumbersAsBase64("LFD", 5, true);
 
         // Assert
         assertEquals(expectedBase64, result, "In PURE mode, the result should be exactly the bytes from LfD API");
@@ -79,7 +79,7 @@ class QuantumServiceTest {
         when(lfdQuantumApiClient.getRandomNumbers(5, "HEX")).thenReturn(mockResponse);
 
         // Act
-        String result = quantumService.getQuantumNumbersAsBase64(5, false);
+        String result = quantumService.getQuantumNumbersAsBase64("LFD", 5, false);
 
         // Assert - Result should preserve original length (5 bytes) after mixing
         byte[] decodedResult = Base64.getDecoder().decode(result);
@@ -97,7 +97,7 @@ class QuantumServiceTest {
         when(lfdQuantumApiClient.getRandomNumbers(6, "HEX")).thenReturn(mockResponse);
 
         // Act
-        quantumService.getQuantumNumbersAsBase64(6, false);
+        quantumService.getQuantumNumbersAsBase64("LFD", 6, false);
 
         // Assert - verify mixWithSystemEntropy was called
         verify(quantumService, times(1)).mixWithSystemEntropy(any());
@@ -110,7 +110,7 @@ class QuantumServiceTest {
 
         // Act & Assert
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-            quantumService.getQuantumNumbersAsBase64(count, false);
+            quantumService.getQuantumNumbersAsBase64("LFD", count, false);
         });
 
         assertEquals("Count must be between 1 and 1024.", exception.getMessage());
@@ -123,7 +123,7 @@ class QuantumServiceTest {
 
         // Act & Assert
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-            quantumService.getQuantumNumbersAsBase64(count, false);
+            quantumService.getQuantumNumbersAsBase64("LFD", count, false);
         });
 
         assertEquals("Count must be between 1 and 1024.", exception.getMessage());
@@ -136,7 +136,7 @@ class QuantumServiceTest {
 
         // Act & Assert
         RuntimeException exception = assertThrows(RuntimeException.class, () -> {
-            quantumService.getQuantumNumbersAsBase64(10, false);
+            quantumService.getQuantumNumbersAsBase64("LFD", 10, false);
         });
 
         assertEquals("Failed to fetch quantum random numbers from LfD API.", exception.getMessage());
@@ -152,7 +152,7 @@ class QuantumServiceTest {
 
         // Act & Assert
         RuntimeException exception = assertThrows(RuntimeException.class, () -> {
-            quantumService.getQuantumNumbersAsBase64(10, false);
+            quantumService.getQuantumNumbersAsBase64("LFD", 10, false);
         });
 
         assertEquals("Failed to fetch quantum random numbers from LfD API.", exception.getMessage());
@@ -170,7 +170,7 @@ class QuantumServiceTest {
 
         // Act & Assert
         RuntimeException exception = assertThrows(RuntimeException.class, () -> {
-            quantumService.getQuantumNumbersAsBase64(14, false);
+            quantumService.getQuantumNumbersAsBase64("LFD", 14, false);
         });
 
         assertTrue(exception.getMessage().contains("Invalid Hex string received from LfD API"));

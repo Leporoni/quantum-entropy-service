@@ -16,6 +16,9 @@ public class QuantumData {
     @Column(name = "data_base64", nullable = false, length = 2048)
     private String dataBase64;
 
+    @Column(name = "source", nullable = false, length = 20)
+    private String source = "LFD";
+
     @Column(name = "created_at", insertable = false, updatable = false)
     private LocalDateTime createdAt;
     

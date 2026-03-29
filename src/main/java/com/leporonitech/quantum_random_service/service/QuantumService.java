@@ -1,5 +1,7 @@
 package com.leporonitech.quantum_random_service.service;
 
+import com.leporonitech.quantum_random_service.client.AnuQuantumApiClient;
+import com.leporonitech.quantum_random_service.dto.AnuApiResponse;
 import com.leporonitech.quantum_random_service.client.LfdQuantumApiClient;
 import com.leporonitech.quantum_random_service.dto.LfdApiResponse;
 import lombok.RequiredArgsConstructor;
@@ -11,6 +13,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.Base64;
 import java.util.HexFormat;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -18,8 +21,16 @@ import java.util.HexFormat;
 public class QuantumService {
 
     private final LfdQuantumApiClient lfdQuantumApiClient;
+    private final AnuQuantumApiClient anuQuantumApiClient;
 
-    public String getQuantumNumbersAsBase64(int count, boolean pure) {
+    public String getQuantumNumbersAsBase64(String source, int count, boolean pure) {
+        if ("ANU".equalsIgnoreCase(source)) {
+            return getAnuNumbersAsBase64(count, pure);
+        }
+        return getLfdNumbersAsBase64(count, pure);
+    }
+
+    public String getLfdNumbersAsBase64(int count, boolean pure) {
         if (count <= 0 || count > 1024) {
             log.warn("Invalid 'count' requested: {}. Must be between 1 and 1024.", count);
             throw new IllegalArgumentException("Count must be between 1 and 1024.");
@@ -45,6 +56,32 @@ public class QuantumService {
              throw new RuntimeException("Invalid Hex string received from LfD API.", e);
         }
 
+        return processEntropy(quantumBytes, pure);
+    }
+
+    public String getAnuNumbersAsBase64(int count, boolean pure) {
+        if (count <= 0 || count > 1024) {
+            throw new IllegalArgumentException("Count must be between 1 and 1024.");
+        }
+
+        log.info("Fetching {} quantum random bytes from ANU API (Pure Mode: {}).", count, pure);
+        AnuApiResponse response = anuQuantumApiClient.getRandomNumbers(count, "uint8");
+
+        if (response == null || !response.isSuccess() || response.getData() == null) {
+            log.error("Failed to fetch quantum random numbers from ANU API. Response: {}", response);
+            throw new RuntimeException("Failed to fetch quantum random numbers from ANU API.");
+        }
+
+        List<Integer> data = response.getData();
+        byte[] quantumBytes = new byte[data.size()];
+        for (int i = 0; i < data.size(); i++) {
+            quantumBytes[i] = data.get(i).byteValue();
+        }
+
+        return processEntropy(quantumBytes, pure);
+    }
+
+    private String processEntropy(byte[] quantumBytes, boolean pure) {
         byte[] finalEntropy;
         if (pure) {
             log.info("Returning PURE quantum entropy as requested for audit/lab.");
