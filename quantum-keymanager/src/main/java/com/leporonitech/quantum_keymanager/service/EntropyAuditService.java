@@ -68,6 +68,12 @@ public class EntropyAuditService {
             if (realSampleSize == 0) realSampleSize = anuSample.length;
         }
 
+        // 2.5 Audit NIST Public Photonic Beacon
+        byte[] nistSample = getQuantumSample("NIST", requestedSize);
+        if (nistSample.length > 0) {
+            results.add(auditSource("Quantum (NIST Beacon)", nistSample));
+        }
+
         // 3. Audit Local PRNGs
         if (realSampleSize > 0) {
             results.add(auditSource("Java SecureRandom (CSPRNG)", getCsprngSample(realSampleSize)));

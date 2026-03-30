@@ -4,6 +4,8 @@ import com.leporonitech.quantum_random_service.client.AnuQuantumApiClient;
 import com.leporonitech.quantum_random_service.dto.AnuApiResponse;
 import com.leporonitech.quantum_random_service.client.LfdQuantumApiClient;
 import com.leporonitech.quantum_random_service.dto.LfdApiResponse;
+import com.leporonitech.quantum_random_service.client.NistQuantumApiClient;
+import com.leporonitech.quantum_random_service.dto.NistApiResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -22,12 +24,37 @@ public class QuantumService {
 
     private final LfdQuantumApiClient lfdQuantumApiClient;
     private final AnuQuantumApiClient anuQuantumApiClient;
+    private final NistQuantumApiClient nistQuantumApiClient;
 
     public String getQuantumNumbersAsBase64(String source, int count, boolean pure) {
         if ("ANU".equalsIgnoreCase(source)) {
             return getAnuNumbersAsBase64(count, pure);
+        } else if ("NIST".equalsIgnoreCase(source)) {
+            return getNistNumbersAsBase64(count, pure);
         }
         return getLfdNumbersAsBase64(count, pure);
+    }
+
+    public String getNistNumbersAsBase64(int count, boolean pure) {
+        log.info("Fetching quantum random pulse from NIST Beacon (Pure Mode: {}).", pure);
+        NistApiResponse response = nistQuantumApiClient.getLastPulse();
+
+        if (response == null || response.getPulse() == null || response.getPulse().getOutputValue() == null) {
+            log.error("Failed to fetch NIST pulse. Response: {}", response);
+            throw new RuntimeException("Failed to fetch NIST pulse from Beacon API.");
+        }
+
+        String hexString = response.getPulse().getOutputValue();
+        byte[] quantumBytes = HexFormat.of().parseHex(hexString);
+
+        // Truncate if requested count is less than 64 bytes
+        if (count > 0 && count < quantumBytes.length) {
+            byte[] truncated = new byte[count];
+            System.arraycopy(quantumBytes, 0, truncated, 0, count);
+            quantumBytes = truncated;
+        }
+
+        return processEntropy(quantumBytes, pure);
     }
 
     public String getLfdNumbersAsBase64(int count, boolean pure) {

@@ -137,6 +137,10 @@ const EntropyLab: React.FC = () => {
           <p>
             <strong>Monte Carlo π:</strong> Approaching 3.14159 proving spatial equidistribution. 
           </p>
+          <p>
+            <strong>NIST Beacon:</strong> Our Public Photonic Reference. It combines multiple 
+            commercial QRNGs (including photonic-based) into a verifiable time-stamped pulse.
+          </p>
         </div>
 
         <div className="info-card">
